@@ -13,8 +13,8 @@ A real-time, WhatsApp-driven queue-tracking system for outpatient departments. P
 
 ## Target Audience
 - Small- and mid-size Indian clinics & hospitals (OPD)  
-- Patients with WhatsApp-enabled phones  
-- Reception / front-desk staff  
+- Patients with WhatsApp-enabled phones
+- Reception / front-desk staff
 - Doctors and nursing staff  
 - Hospital administrators / owners (analytics & billing)
 
@@ -60,7 +60,6 @@ A real-time, WhatsApp-driven queue-tracking system for outpatient departments. P
 ### System / Ops
 - [ ] **Supabase Postgres + Realtime** (WebSockets)  
 - [ ] **Supabase Auth** for authentication & role claims (staff, doctor, admin)  
-- [ ] **Razorpay Subscriptions** for self-serve monthly clinic billing (cards, UPI, GST invoices)  
 - [ ] Deployed on Supabase (DB + Edge Functions) and **Vercel** (Next.js UI; serverless cron)  
 - [ ] Audit log of status changes  (might not need this) and of application 
 - [ ] Encryption at rest & in transit (Supabase default AES-256 / TLS)  
@@ -73,10 +72,10 @@ A real-time, WhatsApp-driven queue-tracking system for outpatient departments. P
 - [ ] Default palette: calm blue & white; open to branding later  
 
 ## Other Notes
-- Twilio for WhatsApp; Razorpay for billing keeps flow fully India-native  
+- Twilio for WhatsApp
 - Green-field MVP; no legacy HIS integration  
 - Data & analytics retained for 30 days (extendable post-MVP)  
-- Future roadmap: ML wait-time prediction, Doctor notes sent to the user (prescription, diagnosis results etc), data-retention policy, multi-tenant SaaS scaling
+- Future roadmap: ML wait-time prediction, Doctor notes sent to the user (prescription, diagnosis results etc), data-retention policy, multi-tenant SaaS scaling;  Razorpay for billing keeps flow fully India-native  
 </project_request>
 
 Next, carefully review the project rules:
@@ -119,8 +118,6 @@ This is a web app template.
 - Backend: Postgres, Supabase, Drizzle ORM, Server Actions
 
 - Auth: Clerk
-
-- Payments: RazorPay (TBD)
 
 - Deployment: Vercel
 
@@ -322,7 +319,6 @@ It uses Next.js, Tailwind, Shadcn, and Framer Motion.
 
 ##### Server Components
 
-  
 
 - Use `"use server"` at the top of the file.
 
@@ -1037,18 +1033,6 @@ It uses Clerk for authentication.
 - Import the auth helper with `import { auth } from "@clerk/nextjs/server"` in server components
 
 - await the auth helper in server actions
-
-  
-
-### Payments Rules (TBD)
-
-Important Note: Lets discard this for now as we will use this later
-
-Follow these rules when working on payments.
-
-  
-
-It uses Stripe for payments.
 
   
 
@@ -4005,9 +3989,8 @@ Before creating the final specification, analyze the project requirements and pl
 6. Design system and component architecture
 7. Authentication and authorization implementation
 8. Data flow and state management
-9. Payment implementation
-10. Analytics implementation
-11. Testing strategy
+9. Analytics implementation
+10. Testing strategy
 
 For each of these areas:
 - Provide a step-by-step breakdown of what needs to be included
@@ -4022,89 +4005,340 @@ In your analysis, be sure to:
 After your analysis, generate the technical specification using the following markdown structure:
 
 ```markdown
-# {Project Name} Technical Specification
+# QCare Technical Specification
 
 ## 1. System Overview
-- Core purpose and value proposition
-- Key workflows
-- System architecture
+- **Core Purpose and Value Proposition**  
+  QCare optimizes outpatient department (OPD) queues by offering real-time position tracking, rolling wait-time estimates, and WhatsApp notifications. Patients stay informed without physically waiting, staff manage a streamlined Kanban board, doctors see concise patient details, and administrators get analytics on wait times.
+
+- **Key Workflows**  
+  1. **Patient Registration**  
+     - Reception registers patient (or patient scans QR) → record is created in `queue_items` with status WAITLIST.  
+     - Twilio WhatsApp message is sent with “#Y in line, estimated wait XX min.”  
+  2. **Queue Management**  
+     - Reception has a Kanban board with columns Bookings, Waitlist, Serving, Complete, Cancelled.  
+     - They reorder via drag-and-drop, send a “You’re next” reminder, or move to next column.  
+  3. **Doctor Consultation**  
+     - Doctors see next-up patients, start consult → WAITLIST → SERVING. Then mark complete → RECORD consult in `consult_history`.  
+  4. **Admin & Analytics**  
+     - Aggregated wait times, daily/weekly stats, CSV export, clinic settings (like alert thresholds).
+
+- **System Architecture**  
+  - **Frontend**: Next.js + Tailwind + Shadcn UI.  
+  - **Backend**: Supabase (Postgres + Realtime) with Drizzle for DB queries, Twilio for WhatsApp.  
+  - **Auth**: The code template uses Clerk; project requirements specify Supabase Auth for roles.  
+  - **Deployment**: Vercel for UI, Supabase for DB/Realtime/Edge Functions.
 
 ## 2. Project Structure
-- Detailed breakdown of project structure & organization
+- **Actions Folder**  
+  - `actions/db/` for database actions (queue actions, consult history, etc.).  
+  - `actions/twilio-actions.ts` for sending WhatsApp messages.  
+
+- **App Folder**  
+  - `(auth)/` for sign in/up (Clerk-based in template, might adapt to Supabase).  
+  - `queue/` for staff’s reception dashboard.  
+    - `page.tsx`, `_components/queue-kanban.tsx`, etc.  
+  - `doctor/` for doctor’s next-up list.  
+  - `admin/` for analytics and clinic settings.  
+
+- **DB Folder**  
+  - `schema/` with definitions for `clinics`, `queue_items`, `consult_history`, `clinic_settings`.  
+  - `db.ts` to initialize and export the drizzle client.  
+
+- **Components**  
+  - Shared UI components in `components/` (e.g., form controls, shared modals, etc.).  
 
 ## 3. Feature Specification
-For each feature:
-### 3.1 Feature Name
-- User story and requirements
-- Detailed implementation steps
-- Error handling and edge cases
+
+### 3.1 Patient Experience
+- **User Story & Requirements**  
+  - Patients receive a WhatsApp message upon registration with their queue position and a rolling wait-time estimate.  
+  - Automatic updates at certain intervals or triggered by status changes.  
+  - “You’re next” alert when position ≤ threshold.  
+  - Possibly multilingual (English, Hindi).  
+
+- **Detailed Implementation Steps**  
+  1. **Registration**: Insert row into `queue_items` with `WAITLIST` status.  
+  2. **Send WhatsApp**: Twilio action that composes text: “You are #Y in line, approx. XX minutes.”  
+  3. **Auto-Refresh**: Either a small Next.js page that polls or uses Supabase Realtime to show updated position.  
+  4. **Threshold Alerts**: On queue reorder or status change, if patient’s position is N or less, automatically send a reminder.  
+
+- **Error Handling & Edge Cases**  
+  - Invalid phone number or Twilio fail → logs an error, staff sees a “failed to send” message.  
+  - Drastic reorder can move the patient significantly → ensure newly computed position is always correct.
+
+### 3.2 Staff Dashboard (Reception)
+- **User Story & Requirements**  
+  - Kanban columns: Bookings (scheduled appointments), Waitlist (walk-ins + waiting scheduled), Serving, Complete, Cancelled.  
+  - Patient card with name, queue #, reason, doctor assignment, quick actions.  
+  - Reorder within Waitlist, and transitions to next column (Serving → Complete, etc.).  
+
+- **Detailed Implementation Steps**  
+  1. **Display**: Query `queue_items` grouped by `status`.  
+  2. **Actions**: 
+     - “You’re next” → Twilio message.  
+     - “Advance” → calls updateQueueStatusAction from WAITLIST to SERVING, or from SERVING to COMPLETE, etc.  
+     - “Cancel” → sets `status = CANCELLED`.  
+  3. **Reordering**: reorderQueueAction updates positions. Possibly store numeric `position` in the DB.  
+
+- **Error Handling & Edge Cases**  
+  - Simultaneous reorders by multiple staff → accept last-in-wins or use a transaction approach.  
+  - If the patient’s phone is missing, “You’re next” is disabled.
+
+### 3.3 Doctor View
+- **User Story & Requirements**  
+  - Doctors see a sorted list of WAITLIST items assigned to them.  
+  - A mini-profile shows quick details (age, gender, vitals, allergies, reason, etc.).  
+  - “Start consult” → moves item to SERVING, “Done” → moves item to COMPLETE, logs consult time in `consult_history`.  
+
+- **Detailed Implementation Steps**  
+  1. **Query**: Filter queue items by `doctorId = currentDoctorId` and `status = WAITLIST`.  
+  2. **Start Consult**: updateQueueStatusAction from WAITLIST to SERVING, store the start time.  
+  3. **Finish Consult**: updateQueueStatusAction from SERVING to COMPLETE, compute durations for analytics.  
+
+- **Error Handling & Edge Cases**  
+  - If the item is no longer in WAITLIST or cancelled, show an error or refresh.  
+  - Potential concurrency if staff tries to move the patient at the same time.
+
+### 3.4 Admin / Analytics
+- **User Story & Requirements**  
+  - Compute daily or weekly average wait times, track normal vs. priority, store data for 30 days.  
+  - CSV export of queue stats or consult times.  
+  - Clinic settings for alert thresholds and default language.  
+
+- **Detailed Implementation Steps**  
+  1. **Analytics**: Summaries from `consult_history` (like average wait, average consult time).  
+  2. **Priority vs. Normal**: If a “priority” toggle is used, record that in queue items. Compare wait times.  
+  3. **CSV Export**: Query consult_history for last 30 days and produce CSV.  
+  4. **Settings**: Manage `clinic_settings` (alertThreshold, defaultLanguage, etc.).  
+
+- **Error Handling & Edge Cases**  
+  - If data is large, implement pagination or streaming for CSV.  
+  - If no consult history found, show placeholders or zero stats.
 
 ## 4. Database Schema
+
 ### 4.1 Tables
-For each table:
-- Complete table schema (field names, types, constraints)
-- Relationships and indexes
+
+#### clinicsTable
+- **Fields**  
+  - id (uuid, PK, defaultRandom)  
+  - name (text, not null)  
+  - createdAt (timestamp, defaultNow, not null)  
+  - updatedAt (timestamp, defaultNow, not null, onUpdate now)  
+
+- **Relationships and Indexes**  
+  - Primary key on id.  
+  - Potentially index name.  
+
+#### queueItemsTable
+- **Fields**  
+  - id (uuid, PK, defaultRandom)  
+  - clinicId (uuid, references clinics.id, onDelete:cascade, not null)  
+  - patientName (text, not null)  
+  - phone (text)  
+  - reason (text)  
+  - status (enum WAITLIST, SERVING, COMPLETE, CANCELLED) default WAITLIST  
+  - position (int) default 0  
+  - doctorId (text)  
+  - createdAt (timestamp, defaultNow, not null)  
+  - updatedAt (timestamp, defaultNow, not null, onUpdate now)  
+
+- **Relationships and Indexes**  
+  - Index (clinicId, position) for sorting waitlists.  
+  - Cascade if clinic is removed.
+
+#### consultHistoryTable
+- **Fields**  
+  - id (uuid, PK, defaultRandom)  
+  - queueItemId (uuid, not null)  
+  - clinicId (uuid, not null)  
+  - waitDurationSeconds (int, not null)  
+  - consultDurationSeconds (int, not null)  
+  - createdAt (timestamp, defaultNow, not null)  
+
+- **Relationships and Indexes**  
+  - Optionally reference queueItemId → onDelete:cascade.  
+  - Index (clinicId, createdAt) for analytics.
+
+#### clinicSettingsTable
+- **Fields**  
+  - id (uuid, PK, defaultRandom)  
+  - clinicId (uuid, references clinics.id, onDelete:cascade, not null)  
+  - alertThreshold (int, default 3)  
+  - defaultLanguage (text, default 'en')  
+  - whatsappTemplateId (text)  
+  - createdAt (timestamp, defaultNow, not null)  
+  - updatedAt (timestamp, defaultNow, not null, onUpdate now)  
+
+- **Relationships and Indexes**  
+  - One row per clinic.  
+  - Index clinicId.
 
 ## 5. Server Actions
+
 ### 5.1 Database Actions
-For each action:
-- Detailed description of the action
-- Input parameters and return values
-- SQL queries or ORM operations
+
+#### createQueueItemAction
+- **Description**  
+  Inserts a new record into queueItemsTable for a patient.  
+
+- **Input/Return**  
+  - Input: clinicId, patientName, optional phone, reason, doctorId.  
+  - Returns: newly created queue item.  
+
+- **ORM**  
+  - Insert row with status = WAITLIST, position = last position + 1.  
+  - Return the inserted row.
+
+#### reorderQueueAction
+- **Description**  
+  Reorders items in the Waitlist by updating position.  
+
+- **Input/Return**  
+  - Input: clinicId, newOrder array of { id, position }.  
+  - Return: success or updated items.  
+
+- **ORM**  
+  - Possibly run multiple updates in a transaction to set new positions.
+
+#### updateQueueStatusAction
+- **Description**  
+  Moves an item from WAITLIST → SERVING → COMPLETE → CANCELLED.  
+
+- **Input/Return**  
+  - Input: queueItemId, newStatus.  
+  - Return: updated queue item.  
+
+- **ORM**  
+  - Update queueItemsTable status.  
+  - If newStatus = COMPLETE, record consult time in consultHistoryTable.
 
 ### 5.2 Other Actions
-- External API integrations (endpoints, authentication, data formats)
-- File handling procedures
-- Data processing algorithms
+
+- **Twilio Integration**  
+  - Endpoint: https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json  
+  - Basic Auth with Twilio SID and Token.  
+  - Data format: JSON with `Body`, `From`, `To`.  
+
+- **File Handling Procedures**  
+  - None major for this MVP, unless storing attachments in the future.  
+
+- **Data Processing Algorithms**  
+  - Rolling average consult time: compute from the last N consultHistory entries.  
+  - “You’re next” alert threshold logic.
 
 ## 6. Design System
+
 ### 6.1 Visual Style
-- Color palette (with hex codes)
-- Typography (font families, sizes, weights)
-- Component styling patterns
-- Spacing and layout principles
+- **Color Palette**  
+  - Primary: #0084FF  
+  - Secondary: #00C49F  
+  - Background: #FFFFFF  
+  - Foreground: #333333  
+  - Muted: #F5F5F5  
+  - Danger: #DC3545  
+
+- **Typography**  
+  - Use Inter or similar. Headings are bold, body text normal.  
+
+- **Component Styling Patterns**  
+  - Cards with `rounded-lg shadow-sm`.  
+  - Buttons with hover states.  
+
+- **Spacing and Layout Principles**  
+  - Use Tailwind defaults, `.container mx-auto px-4`.  
+  - Mobile-first, responsive grids.
 
 ### 6.2 Core Components
-- Layout structure (with examples)
-- Navigation patterns
-- Shared components (with props and usage examples)
-- Interactive states (hover, active, disabled)
+- **Layout Structure**  
+  - Common Header, optional Sidebar for staff or doctor.  
+  - Footer with branding.  
+
+- **Navigation Patterns**  
+  - Top-level marketing site, side or top nav for logged-in staff/doctor.  
+
+- **Shared Components**  
+  - `<QueueCard>`: displays patient data, onClick for next steps.  
+  - `<MiniProfileDialog>`: details about the patient.  
+
+- **Interactive States**  
+  - Hover: slightly lighten or darken background.  
+  - Disabled: reduce opacity.  
 
 ## 7. Component Architecture
+
 ### 7.1 Server Components
-- Data fetching strategy
-- Suspense boundaries
-- Error handling
-- Props interface (with TypeScript types)
+- **Data Fetching Strategy**  
+  - Use Drizzle or server actions in the server page; pass results down as props.  
+
+- **Suspense Boundaries**  
+  - If an async operation is needed, wrap in `<Suspense> fallback={<Skeleton/>}>`.  
+
+- **Error Handling**  
+  - Return an error page or fallback if DB fetch fails.  
+
+- **Props Interface**  
+  - Example: 
+    - interface QueuePageProps { clinicId: string }
 
 ### 7.2 Client Components
-- State management approach
-- Event handlers
-- UI interactions
-- Props interface (with TypeScript types)
+- **State Management Approach**  
+  - Minimal local state, or use React Query / Supabase client for real-time updates.  
+
+- **Event Handlers**  
+  - `onReorder` calls reorderQueueAction, `onNotify` calls Twilio action.  
+
+- **UI Interactions**  
+  - Clicking a card to open a mini-profile, dragging items in Waitlist, etc.  
+
+- **Props Interface**  
+  - Example:
+    - interface QueueKanbanProps { waitlist: QueueItem[]; onReorder(...): void; }
 
 ## 8. Authentication & Authorization
-- Clerk implementation details
-- Protected routes configuration
-- Session management strategy
+- **Clerk Implementation Details**  
+  - The existing template uses Clerk for sign-up/in and server middleware.  
+  - QCare might replace or unify it with Supabase Auth, storing roles in user metadata.  
+
+- **Protected Routes Configuration**  
+  - A middleware or server action checks if the user is staff or doctor.  
+  - If unauthorized, redirect to login.  
+
+- **Session Management Strategy**  
+  - Clerk by default uses cookies; with Supabase, store JWT or session tokens.  
 
 ## 9. Data Flow
-- Server/client data passing mechanisms
-- State management architecture
+- **Server/Client Data Passing Mechanisms**  
+  - Next.js server components fetch DB data, pass as props to client components.  
 
-## 10. Stripe Integration
-- Payment flow diagram
-- Webhook handling process
-- Product/Price configuration details
+- **State Management Architecture**  
+  - Minimal client global state.  
+  - Supabase Realtime or polling for frequent updates to queue data.
 
-## 11. PostHog Analytics
-- Analytics strategy
-- Event tracking implementation
-- Custom property definitions
+## 10. PostHog Analytics
+- **Analytics Strategy**  
+  - Track events like patient_registered, consult_completed, reorder_queue.  
+  - Tag them with clinicId or user role for segmentation.  
 
-## 12. Testing
-- Unit tests with Jest (example test cases)
-- e2e tests with Playwright (key user flows to test)
+- **Event Tracking Implementation**  
+  - Possibly a server action that calls PostHog.  
+  - Alternatively, embed a client snippet.  
+
+- **Custom Property Definitions**  
+  - clinic_id, queue_item_id, role, etc.
+
+## 11. Testing
+- **Unit Tests with Jest**  
+  - Example: createQueueItemAction.test checks DB insertion correctness.  
+  - reorderQueueAction.test tests position updates.  
+  - Twilio action test mocks the sendWhatsApp call.  
+
+- **e2e Tests with Playwright**  
+  - **Reception Flow**: staff logs in, registers patient, moves from WAITLIST to COMPLETE.  
+  - **Doctor Flow**: doctor sees next-up list, starts consult, finishes consult.  
+  - **Alerts**: test “You’re next” triggers Twilio.  
+
 ```
 
 Ensure that your specification is extremely detailed, providing specific implementation guidance wherever possible. Include concrete examples for complex features and clearly define interfaces between components.
