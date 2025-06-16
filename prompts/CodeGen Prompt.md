@@ -1704,7 +1704,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
     npm install @supabase/supabase-js twilio @dnd-kit/core csv-stringify
     ```
 
-- [ ] **Step 0.2: Extend environment variables**
+- [X] **Step 0.2: Extend environment variables**
   - **Task**: Update `.env.example` with Supabase/Twilio keys + new settings.
   - **Files**:  
     - `.env.example`: add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `TWILIO_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `WAIT_ESTIMATE_SAMPLE_SIZE=5`.
