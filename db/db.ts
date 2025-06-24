@@ -1,16 +1,50 @@
-/*
-Initializes the database connection and schema for the app.
-*/
+/**
+ * @file db.ts
+ *
+ * @description
+ *  Centralised Drizzle ORM client initialisation for Postgres, including a
+ *  schema map so Drizzle can infer strongly‑typed query helpers.
+ *
+ *  ❗️Migrations are **not** generated here—follow the user instructions
+ *  below to run `drizzle-kit`.
+ */
 
-import { profilesTable } from "@/db/schema"
+import {
+  clinicsTable,
+  clinicSettingsTable,
+  consultHistoryTable,
+  profilesTable,
+  queueItemsTable
+} from "@/db/schema"
 import { config } from "dotenv"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 
 config({ path: ".env.local" })
 
-const schema = { profiles: profilesTable }
+/**
+ * The schema object must include every pgTable we intend to query through
+ * `db.query.<table>` helpers.  Add new tables here whenever you create a
+ * new schema file.
+ */
+const schema = {
+  profiles: profilesTable,
+  clinics: clinicsTable,
+  queueItems: queueItemsTable,
+  consultHistory: consultHistoryTable,
+  clinicSettings: clinicSettingsTable
+} as const
 
-const client = postgres(process.env.DATABASE_URL!)
+/**
+ * Postgres connection using the DATABASE_URL environment variable.
+ * `postgres()` returns a lazy client that opens the connection pool on
+ * first query.
+ */
+const client = postgres(process.env.DATABASE_URL!, {
+  idle_timeout: 60 // seconds – keep idle connections short for serverless
+})
 
+/**
+ * Drizzle ORM instance—exported for use in server actions.
+ */
 export const db = drizzle(client, { schema })
