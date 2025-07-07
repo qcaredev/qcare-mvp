@@ -23,7 +23,7 @@ import {
   SelectQueueItem
 } from "@/db/schema"
 import { ActionState } from "@/types"
-import { and, asc, desc, eq, gte } from "drizzle-orm"
+import { and, asc, desc, eq, gte, sql } from "drizzle-orm"
 import { startOfDay } from "date-fns"
 import { revalidatePath } from "next/cache"
 import { createConsultHistoryAction } from "./consult_history_actions"
@@ -50,13 +50,6 @@ interface ReorderQueueItem {
 // C R E A T E
 // =================================================================================
 
-/**
- * @function createQueueItemAction
- * @description Inserts a new patient record into the `queue_items` table.
- *
- * @param {CreateQueueItemInput} data - The patient details to be added.
- * @returns {Promise<ActionState<SelectQueueItem>>} An `ActionState` object.
- */
 export async function createQueueItemAction(
   data: CreateQueueItemInput
 ): Promise<ActionState<SelectQueueItem>> {
@@ -109,14 +102,85 @@ export async function createQueueItemAction(
 // =================================================================================
 
 /**
- * @function getQueueItemsByClinicAction
- * @description Retrieves all queue items for a given clinic for the current day.
- *
- * @param {string} clinicId - The UUID of the clinic.
- *
- * @returns {Promise<ActionState<SelectQueueItem[]>>} An `ActionState` object
- * containing an array of queue items.
+ * The shape of the data returned for the public patient-facing queue page.
  */
+export interface PublicQueueDetails {
+  queueItem: SelectQueueItem
+  position: number
+  estimatedWaitTimeMinutes: number
+}
+
+export async function getPublicQueueItemDetailsAction(
+  queueItemId: string
+): Promise<ActionState<PublicQueueDetails>> {
+  try {
+    // 1. Fetch the specific patient's queue item
+    const [item] = await db
+      .select()
+      .from(queueItemsTable)
+      .where(eq(queueItemsTable.id, queueItemId))
+
+    if (!item) {
+      return { isSuccess: false, message: "Queue entry not found." }
+    }
+
+    if (item.status !== "WAITLIST") {
+      return {
+        isSuccess: false,
+        message: `Your consultation status is: ${item.status}.`
+      }
+    }
+
+    const { clinicId } = item
+
+    // 2. Fetch all patients in the waitlist for that clinic to determine position
+    const waitlist = await db.query.queueItems.findMany({
+      where: and(
+        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.status, "WAITLIST")
+      ),
+      orderBy: [asc(queueItemsTable.position)]
+    })
+
+    const position = waitlist.findIndex(i => i.id === queueItemId)
+
+    // 3. Calculate estimated wait time based on recent consultations
+    const sampleSize = parseInt(process.env.WAIT_ESTIMATE_SAMPLE_SIZE || "5")
+    const recentConsults = await db
+      .select({ duration: consultHistoryTable.consultDurationSeconds })
+      .from(consultHistoryTable)
+      .where(eq(consultHistoryTable.clinicId, clinicId))
+      .orderBy(desc(consultHistoryTable.createdAt))
+      .limit(sampleSize)
+
+    let avgConsultTimeSeconds = 15 * 60 // Default to 15 mins
+    if (recentConsults.length > 0) {
+      const totalDuration = recentConsults.reduce(
+        (sum, consult) => sum + consult.duration,
+        0
+      )
+      avgConsultTimeSeconds = totalDuration / recentConsults.length
+    }
+
+    const estimatedWaitTimeMinutes = Math.round(
+      (position * avgConsultTimeSeconds) / 60
+    )
+
+    return {
+      isSuccess: true,
+      message: "Queue details retrieved.",
+      data: {
+        queueItem: item,
+        position: position + 1, // Return 1-based index for display
+        estimatedWaitTimeMinutes
+      }
+    }
+  } catch (error) {
+    console.error("Error getting public queue details:", error)
+    return { isSuccess: false, message: "Failed to retrieve queue details." }
+  }
+}
+
 export async function getQueueItemsByClinicAction(
   clinicId: string
 ): Promise<ActionState<SelectQueueItem[]>> {
@@ -145,17 +209,40 @@ export async function getQueueItemsByClinicAction(
   }
 }
 
+export async function getQueueItemsByDoctorIdAction(
+  clinicId: string,
+  doctorId: string
+): Promise<ActionState<SelectQueueItem[]>> {
+  try {
+    const todayStart = startOfDay(new Date())
+    const items = await db.query.queueItems.findMany({
+      where: and(
+        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.doctorId, doctorId),
+        eq(queueItemsTable.status, "WAITLIST"),
+        gte(queueItemsTable.createdAt, todayStart)
+      ),
+      orderBy: [asc(queueItemsTable.position)]
+    })
+
+    return {
+      isSuccess: true,
+      message: `Queue for Dr. ${doctorId} retrieved successfully.`,
+      data: items
+    }
+  } catch (error) {
+    console.error("Error retrieving doctor's queue items:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return { isSuccess: false, message: "Failed to retrieve doctor's queue." }
+  }
+}
+
 // =================================================================================
 // U P D A T E
 // =================================================================================
 
-/**
- * @function reorderQueueAction
- * @description Updates the `position` for multiple items in the waitlist.
- *
- * @param {ReorderQueueItem[]} items - An array of items with their new positions.
- * @returns {Promise<ActionState<void>>} An `ActionState` object.
- */
 export async function reorderQueueAction(
   items: ReorderQueueItem[]
 ): Promise<ActionState<void>> {
@@ -186,14 +273,6 @@ export async function reorderQueueAction(
   }
 }
 
-/**
- * @function updateQueueStatusAction
- * @description Moves a queue item to a new status.
- *
- * @param {string} queueItemId - The ID of the item to update.
- * @param {SelectQueueItem["status"]} newStatus - The target status.
- * @returns {Promise<ActionState<SelectQueueItem>>} An `ActionState` object.
- */
 export async function updateQueueStatusAction(
   queueItemId: string,
   newStatus: (typeof queueStatusEnum.enumValues)[number]
@@ -221,14 +300,15 @@ export async function updateQueueStatusAction(
           (completionTime.getTime() - consultStartTime.getTime()) / 1000
         )
 
-        const historyResult = await createConsultHistoryAction(
-          {
+        const historyResult = await createConsultHistoryAction({
+          data: {
             queueItemId: currentItem.id,
             clinicId: currentItem.clinicId,
             waitDurationSeconds,
             consultDurationSeconds
           },
-        )
+          tx
+        })
 
         if (!historyResult.isSuccess) {
           throw new Error(

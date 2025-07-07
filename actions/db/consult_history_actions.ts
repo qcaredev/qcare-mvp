@@ -18,26 +18,36 @@ import {
 } from "@/db/schema"
 import { ActionState } from "@/types"
 
-// This type alias improves readability for the optional transaction client parameter.
-type TransactionClient = typeof db
+/**
+ * Defines a union type that can accept either the main Drizzle `db` client or
+ * the client from within a `db.transaction(async (tx) => {})` block.
+ * This allows the action to be composable and used within other transactions.
+ */
+type DbOrTxClient =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// The input interface now uses the flexible DbOrTxClient type.
+interface CreateHistoryInput {
+  data: InsertConsultHistory
+  tx?: DbOrTxClient
+}
 
 /**
  * @function createConsultHistoryAction
  * @description Creates a new record in the `consult_history` table. Can be
  * used within a larger database transaction by passing the transaction client.
  *
- * @param {InsertConsultHistory} data - The consultation metrics to log.
- * @param {TransactionClient} [tx] - (Optional) The Drizzle transaction client.
- * If provided, the action will use this client instead of the global one,
- * making it part of the ongoing transaction.
+ * @param {CreateHistoryInput} { data, tx } - An object containing the data and
+ * an optional Drizzle transaction client.
  *
  * @returns {Promise<ActionState<SelectConsultHistory>>} An `ActionState` object
  * containing the result of the operation.
  */
-export async function createConsultHistoryAction(
-  data: InsertConsultHistory,
-  tx?: TransactionClient
-): Promise<ActionState<SelectConsultHistory>> {
+export async function createConsultHistoryAction({
+  data,
+  tx
+}: CreateHistoryInput): Promise<ActionState<SelectConsultHistory>> {
   try {
     // Use the transaction client if it's passed, otherwise use the global db client.
     const dbClient = tx || db

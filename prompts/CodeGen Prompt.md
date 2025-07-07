@@ -1712,33 +1712,14 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 ## 4 – Reception Dashboard
 - [X] **Step 4.1: Route & Server Page**
 - [X] **Step 4.2: Kanban Client Component**
-  - **Task**: Implement `_components/queue-kanban.tsx` using `@dnd-kit`. Includes drag, advance, cancel, notify.
-  - **Files**:  
-    - `app/reception/_components/queue-kanban.tsx`
-    - `app/reception/_components/queue-card.tsx`
-  - **Step Dependencies**: 4.1
-
 - [X] **Step 4.3: Queue Mutations Hooks**
-  - **Task**: Client helpers that call server actions & optimistic update.
-  - **Files**:  
-    - `app/reception/_components/use-queue-mutations.ts`
-  - **Step Dependencies**: 4.2
 
 ## 5 – Doctor Dashboard
-- [ ] **Step 5.1: Route & Server Page**
-  - **Task**: `app/doctor/page.tsx` lists WAITLIST items filtered by doctorId.
-  - **Files**:  
-    - `app/doctor/page.tsx`
-  - **Step Dependencies**: 2.3
-
-- [ ] **Step 5.2: Mini‑Profile Dialog**
-  - **Task**: Client component showing Name | Age | Gender | Complaint etc.
-  - **Files**:  
-    - `app/doctor/_components/mini-profile-dialog.tsx`
-  - **Step Dependencies**: 5.1
+- [X] **Step 5.1: Route & Server Page**
+- [X] **Step 5.2: Mini-Profile Dialog**
 
 ## 6 – Patient Public Page
-- [ ] **Step 6.1: Route**
+- [X] **Step 6.1: Route**
   - **Task**: `app/q/[queueId]/page.tsx` – shows live position & wait‑time, auto‑refresh via Supabase Realtime.
   - **Files**:  
     - `app/q/[queueId]/page.tsx`
@@ -2746,430 +2727,6 @@ const client = postgres(process.env.DATABASE_URL!, {
 export const db = drizzle(client, { schema })
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
-/*
-Hook to check if the user is on a mobile device.
-*/
-
-import * as React from "react"
-
-const MOBILE_BREAKPOINT = 768
-
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return !!isMobile
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
-/*
-Hook for copying text to the clipboard.
-*/
-
-"use client"
-
-import { useState } from "react"
-
-export interface useCopyToClipboardProps {
-  timeout?: number
-}
-
-export function useCopyToClipboard({
-  timeout = 2000
-}: useCopyToClipboardProps) {
-  const [isCopied, setIsCopied] = useState<Boolean>(false)
-
-  const copyToClipboard = (value: string) => {
-    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
-      return
-    }
-
-    if (!value) {
-      return
-    }
-
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true)
-
-      setTimeout(() => {
-        setIsCopied(false)
-      }, timeout)
-    })
-  }
-
-  return { isCopied, copyToClipboard }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
-/*
-Hook to display toast notifications.
-*/
-
-"use client"
-
-// Inspired by react-hot-toast library
-import * as React from "react"
-
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
-type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-}
-
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST"
-} as const
-
-let count = 0
-
-function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
-}
-
-type ActionType = typeof actionTypes
-
-type Action =
-  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
-  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
-  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
-  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
-
-interface State {
-  toasts: ToasterToast[]
-}
-
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
-  }, TOAST_REMOVE_DELAY)
-
-  toastTimeouts.set(toastId, timeout)
-}
-
-export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
-      }
-
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        )
-      }
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach(toast => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
-        )
-      }
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return { ...state, toasts: [] }
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter(t => t.id !== action.toastId)
-      }
-  }
-}
-
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach(listener => {
-    listener(memoryState)
-  })
-}
-
-type Toast = Omit<ToasterToast, "id">
-
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: open => {
-        if (!open) dismiss()
-      }
-    }
-  })
-
-  return { id: id, dismiss, update }
-}
-
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
-
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [state])
-
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
-  }
-}
-
-export { toast, useToast }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/actions/db/profiles-actions.ts
-/*
-Contains server actions related to profiles in the DB.
-*/
-
-"use server"
-
-import { db } from "@/db/db"
-import {
-  InsertProfile,
-  profilesTable,
-  SelectProfile
-} from "@/db/schema/profiles-schema"
-import { ActionState } from "@/types"
-import { eq } from "drizzle-orm"
-
-export async function createProfileAction(
-  data: InsertProfile
-): Promise<ActionState<SelectProfile>> {
-  try {
-    const [newProfile] = await db.insert(profilesTable).values(data).returning()
-    return {
-      isSuccess: true,
-      message: "Profile created successfully",
-      data: newProfile
-    }
-  } catch (error) {
-    console.error("Error creating profile:", error)
-    return { isSuccess: false, message: "Failed to create profile" }
-  }
-}
-
-export async function getProfileByUserIdAction(
-  userId: string
-): Promise<ActionState<SelectProfile>> {
-  try {
-    const profile = await db.query.profiles.findFirst({
-      where: eq(profilesTable.userId, userId)
-    })
-    if (!profile) {
-      return { isSuccess: false, message: "Profile not found" }
-    }
-
-    return {
-      isSuccess: true,
-      message: "Profile retrieved successfully",
-      data: profile
-    }
-  } catch (error) {
-    console.error("Error getting profile by user id", error)
-    return { isSuccess: false, message: "Failed to get profile" }
-  }
-}
-
-export async function updateProfileAction(
-  userId: string,
-  data: Partial<InsertProfile>
-): Promise<ActionState<SelectProfile>> {
-  try {
-    const [updatedProfile] = await db
-      .update(profilesTable)
-      .set(data)
-      .where(eq(profilesTable.userId, userId))
-      .returning()
-
-    if (!updatedProfile) {
-      return { isSuccess: false, message: "Profile not found to update" }
-    }
-
-    return {
-      isSuccess: true,
-      message: "Profile updated successfully",
-      data: updatedProfile
-    }
-  } catch (error) {
-    console.error("Error updating profile:", error)
-    return { isSuccess: false, message: "Failed to update profile" }
-  }
-}
-
-export async function updateProfileByStripeCustomerIdAction(
-  stripeCustomerId: string,
-  data: Partial<InsertProfile>
-): Promise<ActionState<SelectProfile>> {
-  try {
-    const [updatedProfile] = await db
-      .update(profilesTable)
-      .set(data)
-      .where(eq(profilesTable.stripeCustomerId, stripeCustomerId))
-      .returning()
-
-    if (!updatedProfile) {
-      return {
-        isSuccess: false,
-        message: "Profile not found by Stripe customer ID"
-      }
-    }
-
-    return {
-      isSuccess: true,
-      message: "Profile updated by Stripe customer ID successfully",
-      data: updatedProfile
-    }
-  } catch (error) {
-    console.error("Error updating profile by stripe customer ID:", error)
-    return {
-      isSuccess: false,
-      message: "Failed to update profile by Stripe customer ID"
-    }
-  }
-}
-
-export async function deleteProfileAction(
-  userId: string
-): Promise<ActionState<void>> {
-  try {
-    await db.delete(profilesTable).where(eq(profilesTable.userId, userId))
-    return {
-      isSuccess: true,
-      message: "Profile deleted successfully",
-      data: undefined
-    }
-  } catch (error) {
-    console.error("Error deleting profile:", error)
-    return { isSuccess: false, message: "Failed to delete profile" }
-  }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/layout.tsx
-/*
-This server layout provides a shared header and basic structure for (marketing) routes.
-*/
-
-"use server"
-
-import { Footer } from "@/components/landing/footer"
-import Header from "@/components/landing/header"
-
-export default async function MarketingLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <div className="flex-1">{children}</div>
-      <Footer />
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/page.tsx
-/*
-This server page is the marketing homepage.
-*/
-
-"use server"
-
-import { HeroSection } from "@/components/landing/hero"
-
-export default async function HomePage() {
-  return (
-    <div className="pb-20">
-      <HeroSection />
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
-/*
-This server layout provides a centered layout for (auth) pages.
-*/
-
-"use server"
-
-interface AuthLayoutProps {
-  children: React.ReactNode
-}
-
-export default async function AuthLayout({ children }: AuthLayoutProps) {
-  return (
-    <div className="flex h-screen items-center justify-center">{children}</div>
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/components/landing/hero.tsx
 /*
 This client component provides the hero section for the landing page.
@@ -3759,6 +3316,387 @@ export default function HeroVideoDialog({
 }
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
+/*
+Hook to check if the user is on a mobile device.
+*/
+
+import * as React from "react"
+
+const MOBILE_BREAKPOINT = 768
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
+/*
+Hook for copying text to the clipboard.
+*/
+
+"use client"
+
+import { useState } from "react"
+
+export interface useCopyToClipboardProps {
+  timeout?: number
+}
+
+export function useCopyToClipboard({
+  timeout = 2000
+}: useCopyToClipboardProps) {
+  const [isCopied, setIsCopied] = useState<Boolean>(false)
+
+  const copyToClipboard = (value: string) => {
+    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
+      return
+    }
+
+    if (!value) {
+      return
+    }
+
+    navigator.clipboard.writeText(value).then(() => {
+      setIsCopied(true)
+
+      setTimeout(() => {
+        setIsCopied(false)
+      }, timeout)
+    })
+  }
+
+  return { isCopied, copyToClipboard }
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
+/*
+Hook to display toast notifications.
+*/
+
+"use client"
+
+// Inspired by react-hot-toast library
+import * as React from "react"
+
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST"
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
+  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
+  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
+  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        )
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach(toast => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
+        )
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return { ...state, toasts: [] }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter(t => t.id !== action.toastId)
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach(listener => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: open => {
+        if (!open) dismiss()
+      }
+    }
+  })
+
+  return { id: id, dismiss, update }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
+  }
+}
+
+export { toast, useToast }
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/actions/db/profiles-actions.ts
+/*
+Contains server actions related to profiles in the DB.
+*/
+
+"use server"
+
+import { db } from "@/db/db"
+import {
+  InsertProfile,
+  profilesTable,
+  SelectProfile
+} from "@/db/schema/profiles-schema"
+import { ActionState } from "@/types"
+import { eq } from "drizzle-orm"
+
+export async function createProfileAction(
+  data: InsertProfile
+): Promise<ActionState<SelectProfile>> {
+  try {
+    const [newProfile] = await db.insert(profilesTable).values(data).returning()
+    return {
+      isSuccess: true,
+      message: "Profile created successfully",
+      data: newProfile
+    }
+  } catch (error) {
+    console.error("Error creating profile:", error)
+    return { isSuccess: false, message: "Failed to create profile" }
+  }
+}
+
+export async function getProfileByUserIdAction(
+  userId: string
+): Promise<ActionState<SelectProfile>> {
+  try {
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profilesTable.userId, userId)
+    })
+    if (!profile) {
+      return { isSuccess: false, message: "Profile not found" }
+    }
+
+    return {
+      isSuccess: true,
+      message: "Profile retrieved successfully",
+      data: profile
+    }
+  } catch (error) {
+    console.error("Error getting profile by user id", error)
+    return { isSuccess: false, message: "Failed to get profile" }
+  }
+}
+
+export async function updateProfileAction(
+  userId: string,
+  data: Partial<InsertProfile>
+): Promise<ActionState<SelectProfile>> {
+  try {
+    const [updatedProfile] = await db
+      .update(profilesTable)
+      .set(data)
+      .where(eq(profilesTable.userId, userId))
+      .returning()
+
+    if (!updatedProfile) {
+      return { isSuccess: false, message: "Profile not found to update" }
+    }
+
+    return {
+      isSuccess: true,
+      message: "Profile updated successfully",
+      data: updatedProfile
+    }
+  } catch (error) {
+    console.error("Error updating profile:", error)
+    return { isSuccess: false, message: "Failed to update profile" }
+  }
+}
+
+export async function updateProfileByStripeCustomerIdAction(
+  stripeCustomerId: string,
+  data: Partial<InsertProfile>
+): Promise<ActionState<SelectProfile>> {
+  try {
+    const [updatedProfile] = await db
+      .update(profilesTable)
+      .set(data)
+      .where(eq(profilesTable.stripeCustomerId, stripeCustomerId))
+      .returning()
+
+    if (!updatedProfile) {
+      return {
+        isSuccess: false,
+        message: "Profile not found by Stripe customer ID"
+      }
+    }
+
+    return {
+      isSuccess: true,
+      message: "Profile updated by Stripe customer ID successfully",
+      data: updatedProfile
+    }
+  } catch (error) {
+    console.error("Error updating profile by stripe customer ID:", error)
+    return {
+      isSuccess: false,
+      message: "Failed to update profile by Stripe customer ID"
+    }
+  }
+}
+
+export async function deleteProfileAction(
+  userId: string
+): Promise<ActionState<void>> {
+  try {
+    await db.delete(profilesTable).where(eq(profilesTable.userId, userId))
+    return {
+      isSuccess: true,
+      message: "Profile deleted successfully",
+      data: undefined
+    }
+  } catch (error) {
+    console.error("Error deleting profile:", error)
+    return { isSuccess: false, message: "Failed to delete profile" }
+  }
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
+/*
+This server layout provides a centered layout for (auth) pages.
+*/
+
+"use server"
+
+interface AuthLayoutProps {
+  children: React.ReactNode
+}
+
+export default async function AuthLayout({ children }: AuthLayoutProps) {
+  return (
+    <div className="flex h-screen items-center justify-center">{children}</div>
+  )
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
 /*
 This server component provides a tailwind indicator for the app in dev mode.
@@ -3845,6 +3783,360 @@ export const Providers = ({ children, ...props }: ThemeProviderProps) => {
     </NextThemesProvider>
   )
 }
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/layout.tsx
+/*
+This server layout provides a shared header and basic structure for (marketing) routes.
+*/
+
+"use server"
+
+import { Footer } from "@/components/landing/footer"
+import Header from "@/components/landing/header"
+
+export default async function MarketingLayout({
+  children
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <div className="flex-1">{children}</div>
+      <Footer />
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/page.tsx
+/*
+This server page is the marketing homepage.
+*/
+
+"use server"
+
+import { HeroSection } from "@/components/landing/hero"
+
+export default async function HomePage() {
+  return (
+    <div className="pb-20">
+      <HeroSection />
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/clinic-settings-schema.ts
+/**
+ * @file clinic-settings-schema.ts
+ *
+ * @description
+ *  Drizzle ORM table definition for **`clinic_settings`**.
+ *  Holds user‑configurable behaviour such as WhatsApp alert thresholds.
+ *
+ * @columns
+ *  - clinicId (FK)          : The owning clinic (unique)
+ *  - alertThreshold         : Integer (# patients away to trigger alert)
+ *  - defaultLanguage        : Text (e.g., 'en' | 'hi')
+ *  - whatsappTemplateId     : Twilio template reference
+ *  - createdAt / updatedAt  : Audit
+ *
+ * @rules
+ *  - Exactly **one row per clinic** enforced via a unique constraint.
+ */
+
+import {
+  pgTable,
+  text,
+  integer,
+  timestamp,
+  uuid,
+  unique
+} from "drizzle-orm/pg-core"
+
+import { clinicsTable } from "./clinics-schema"
+
+export const clinicSettingsTable = pgTable(
+  "clinic_settings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    clinicId: uuid("clinic_id")
+      .references(() => clinicsTable.id, { onDelete: "cascade" })
+      .notNull(),
+
+    alertThreshold: integer("alert_threshold").notNull().default(3),
+
+    defaultLanguage: text("default_language").notNull().default("en"),
+
+    whatsappTemplateId: text("whatsapp_template_id"),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date())
+  },
+  /**
+   * Table‑level configurations (constraints, indexes).
+   * `unique(clinicId)` makes sure each clinic has at most one settings row.
+   */
+  table => ({
+    clinicUnique: unique("clinic_settings_clinic_id_unique").on(table.clinicId)
+  })
+)
+
+export type InsertClinicSettings = typeof clinicSettingsTable.$inferInsert
+export type SelectClinicSettings = typeof clinicSettingsTable.$inferSelect
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/queue-items-schema.ts
+/**
+ * @file queue-items-schema.ts
+ *
+ * @description
+ *  Drizzle ORM table definition for **`queue_items`**. Each row represents
+ *  a patient currently (or previously) in an OPD queue.
+ *
+ *  The table supports real‑time updates via Supabase Realtime, so we set
+ *  `replica identity full` in Step 1.2 SQL instructions.
+ *
+ * @columns
+ *  - id, clinicId              : Identification & tenancy
+ *  - patientName, phone        : Patient contact details
+ *  - reason                    : Reason for visit / chief complaint
+ *  - status (enum)             : WAITLIST | SERVING | COMPLETE | CANCELLED
+ *  - position                  : Integer ordering within WAITLIST
+ *  - doctorId                  : Optional textual identifier for doctor
+ *  - createdAt / updatedAt     : Audit timestamps
+ *
+ * @relations
+ *  - FK clinicId ➔ clinics.id   (ON DELETE CASCADE)
+ *
+ * @business‑rules
+ *  - `position` is only meaningful when `status = WAITLIST`.
+ *  - `phone` is optional because some walk‑ins may not provide a number.
+ */
+
+import {
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid
+} from "drizzle-orm/pg-core"
+
+import { clinicsTable } from "./clinics-schema"
+
+/** Status enumeration as per functional spec */
+export const queueStatusEnum = pgEnum("queue_status", [
+  "WAITLIST",
+  "SERVING",
+  "COMPLETE",
+  "CANCELLED"
+])
+
+export const queueItemsTable = pgTable("queue_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  /** Tenant reference — cascades on clinic deletion */
+  clinicId: uuid("clinic_id")
+    .references(() => clinicsTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  /** Patient‑facing fields */
+  patientName: text("patient_name").notNull(),
+  phone: text("phone"), // Optional
+
+  /** Chief complaint / reason for visit */
+  reason: text("reason"),
+
+  /** Current queue status; default is WAITLIST */
+  status: queueStatusEnum("status").notNull().default("WAITLIST"),
+
+  /**
+   * Display ordering inside WAITLIST.
+   * IMPORTANT: Managed exclusively by server actions that enforce a dense
+   * ranking (0‑n without gaps) to simplify “position” math.
+   */
+  position: integer("position").notNull().default(0),
+
+  /**
+   * The doctor the patient is eventually assigned to.
+   * We store the Clerk/Supabase userId or any identifier string.
+   */
+  doctorId: text("doctor_id"),
+
+  /** Audit fields */
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date())
+})
+
+/** Insert type for `queueItemsTable` */
+export type InsertQueueItem = typeof queueItemsTable.$inferInsert
+/** Select type for `queueItemsTable` */
+export type SelectQueueItem = typeof queueItemsTable.$inferSelect
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/consult-history-schema.ts
+/**
+ * @file consult-history-schema.ts
+ *
+ * @description
+ *  Drizzle ORM table definition for **`consult_history`**.
+ *  Each row captures timing metrics once a consultation finishes,
+ *  enabling analytics without scanning the volatile `queue_items`.
+ *
+ * @columns
+ *  - queueItemId : FK to the source queue item (CASCADE on delete)
+ *  - clinicId    : Tenant, duplicative for faster analytics queries
+ *  - waitDurationSeconds
+ *  - consultDurationSeconds
+ *  - createdAt / updatedAt : Audit
+ *
+ * @notes
+ *  - We duplicate `clinicId` for composite indexing and because
+ *    `queue_items` may be removed after 30 days retention.
+ */
+
+import { integer, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
+
+import { clinicsTable } from "./clinics-schema"
+import { queueItemsTable } from "./queue-items-schema"
+
+export const consultHistoryTable = pgTable("consult_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  /** Original queue item for traceability */
+  queueItemId: uuid("queue_item_id")
+    .references(() => queueItemsTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  /** Tenant reference (duplicated for faster aggregation) */
+  clinicId: uuid("clinic_id")
+    .references(() => clinicsTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  /** Time between registration and consult start, in seconds */
+  waitDurationSeconds: integer("wait_duration_seconds").notNull(),
+
+  /** Time between consult start and completion, in seconds */
+  consultDurationSeconds: integer("consult_duration_seconds").notNull(),
+
+  /** Audit timestamps */
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date())
+})
+
+export type InsertConsultHistory = typeof consultHistoryTable.$inferInsert
+export type SelectConsultHistory = typeof consultHistoryTable.$inferSelect
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/profiles-schema.ts
+/*
+Defines the database schema for profiles.
+*/
+
+import { pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+
+export const membershipEnum = pgEnum("membership", ["free", "pro"])
+
+export const profilesTable = pgTable("profiles", {
+  userId: text("user_id").primaryKey().notNull(),
+  membership: membershipEnum("membership").notNull().default("free"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date())
+})
+
+export type InsertProfile = typeof profilesTable.$inferInsert
+export type SelectProfile = typeof profilesTable.$inferSelect
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/index.ts
+/**
+ * @file index.ts
+ *
+ * @description
+ *  Barrel file that re‑exports every Drizzle schema in `db/schema`.
+ *  The order of exports is not important but keeping them alphabetical
+ *  improves merge resolution.
+ */
+
+export * from "./clinics-schema"
+export * from "./clinic-settings-schema"
+export * from "./consult-history-schema"
+export * from "./profiles-schema"
+export * from "./queue-items-schema"
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/clinics-schema.ts
+/**
+ * @file clinics-schema.ts
+ *
+ * @description
+ *  Drizzle ORM table definition for **`clinics`**—the top‑level tenant
+ *  entity that owns queue items, settings, and analytics.
+ *
+ *  Every other domain table contains a `clinicId` FK that cascades on delete,
+ *  allowing a single statement to purge all clinic‑scoped data if a clinic is
+ *  removed from the platform.
+ *
+ * @columns
+ *  - id          : Primary UUID identifier (generated server‑side)
+ *  - name        : Human‑readable clinic name (required)
+ *  - createdAt   : Record creation timestamp (default = now)
+ *  - updatedAt   : Record update timestamp (auto‑updated on mutation)
+ *
+ * @notes
+ *  - We **always** include an `updatedAt` column (project rule) even when
+ *    it is not explicitly mentioned in the spec.
+ *  - Indexing `name` is optional at this stage; query volume for clinic
+ *    listing is expected to be low. We will add indexes when analytics
+ *    warrants it.
+ */
+
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+
+export const clinicsTable = pgTable("clinics", {
+  /** Primary key — generated UUID */
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  /** Display name of the clinic */
+  name: text("name").notNull(),
+
+  /** Record creation timestamp */
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+
+  /**
+   * Record last‑update timestamp
+   * Automatically updates on every mutation via `$onUpdate`.
+   */
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date())
+})
+
+/** Insert type for `clinicsTable` (used when creating a new clinic) */
+export type InsertClinic = typeof clinicsTable.$inferInsert
+
+/** Select type for `clinicsTable` (used when reading a clinic) */
+export type SelectClinic = typeof clinicsTable.$inferSelect
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
@@ -4195,317 +4487,6 @@ export default async function ContactPage() {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/clinic-settings-schema.ts
-/**
- * @file clinic-settings-schema.ts
- *
- * @description
- *  Drizzle ORM table definition for **`clinic_settings`**.
- *  Holds user‑configurable behaviour such as WhatsApp alert thresholds.
- *
- * @columns
- *  - clinicId (FK)          : The owning clinic (unique)
- *  - alertThreshold         : Integer (# patients away to trigger alert)
- *  - defaultLanguage        : Text (e.g., 'en' | 'hi')
- *  - whatsappTemplateId     : Twilio template reference
- *  - createdAt / updatedAt  : Audit
- *
- * @rules
- *  - Exactly **one row per clinic** enforced via a unique constraint.
- */
-
-import {
-  pgTable,
-  text,
-  integer,
-  timestamp,
-  uuid,
-  unique
-} from "drizzle-orm/pg-core"
-
-import { clinicsTable } from "./clinics-schema"
-
-export const clinicSettingsTable = pgTable(
-  "clinic_settings",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-
-    clinicId: uuid("clinic_id")
-      .references(() => clinicsTable.id, { onDelete: "cascade" })
-      .notNull(),
-
-    alertThreshold: integer("alert_threshold").notNull().default(3),
-
-    defaultLanguage: text("default_language").notNull().default("en"),
-
-    whatsappTemplateId: text("whatsapp_template_id"),
-
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date())
-  },
-  /**
-   * Table‑level configurations (constraints, indexes).
-   * `unique(clinicId)` makes sure each clinic has at most one settings row.
-   */
-  table => ({
-    clinicUnique: unique("clinic_settings_clinic_id_unique").on(table.clinicId)
-  })
-)
-
-export type InsertClinicSettings = typeof clinicSettingsTable.$inferInsert
-export type SelectClinicSettings = typeof clinicSettingsTable.$inferSelect
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/queue-items-schema.ts
-/**
- * @file queue-items-schema.ts
- *
- * @description
- *  Drizzle ORM table definition for **`queue_items`**. Each row represents
- *  a patient currently (or previously) in an OPD queue.
- *
- *  The table supports real‑time updates via Supabase Realtime, so we set
- *  `replica identity full` in Step 1.2 SQL instructions.
- *
- * @columns
- *  - id, clinicId              : Identification & tenancy
- *  - patientName, phone        : Patient contact details
- *  - reason                    : Reason for visit / chief complaint
- *  - status (enum)             : WAITLIST | SERVING | COMPLETE | CANCELLED
- *  - position                  : Integer ordering within WAITLIST
- *  - doctorId                  : Optional textual identifier for doctor
- *  - createdAt / updatedAt     : Audit timestamps
- *
- * @relations
- *  - FK clinicId ➔ clinics.id   (ON DELETE CASCADE)
- *
- * @business‑rules
- *  - `position` is only meaningful when `status = WAITLIST`.
- *  - `phone` is optional because some walk‑ins may not provide a number.
- */
-
-import {
-  integer,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uuid
-} from "drizzle-orm/pg-core"
-
-import { clinicsTable } from "./clinics-schema"
-
-/** Status enumeration as per functional spec */
-export const queueStatusEnum = pgEnum("queue_status", [
-  "WAITLIST",
-  "SERVING",
-  "COMPLETE",
-  "CANCELLED"
-])
-
-export const queueItemsTable = pgTable("queue_items", {
-  id: uuid("id").defaultRandom().primaryKey(),
-
-  /** Tenant reference — cascades on clinic deletion */
-  clinicId: uuid("clinic_id")
-    .references(() => clinicsTable.id, { onDelete: "cascade" })
-    .notNull(),
-
-  /** Patient‑facing fields */
-  patientName: text("patient_name").notNull(),
-  phone: text("phone"), // Optional
-
-  /** Chief complaint / reason for visit */
-  reason: text("reason"),
-
-  /** Current queue status; default is WAITLIST */
-  status: queueStatusEnum("status").notNull().default("WAITLIST"),
-
-  /**
-   * Display ordering inside WAITLIST.
-   * IMPORTANT: Managed exclusively by server actions that enforce a dense
-   * ranking (0‑n without gaps) to simplify “position” math.
-   */
-  position: integer("position").notNull().default(0),
-
-  /**
-   * The doctor the patient is eventually assigned to.
-   * We store the Clerk/Supabase userId or any identifier string.
-   */
-  doctorId: text("doctor_id"),
-
-  /** Audit fields */
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date())
-})
-
-/** Insert type for `queueItemsTable` */
-export type InsertQueueItem = typeof queueItemsTable.$inferInsert
-/** Select type for `queueItemsTable` */
-export type SelectQueueItem = typeof queueItemsTable.$inferSelect
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/consult-history-schema.ts
-/**
- * @file consult-history-schema.ts
- *
- * @description
- *  Drizzle ORM table definition for **`consult_history`**.
- *  Each row captures timing metrics once a consultation finishes,
- *  enabling analytics without scanning the volatile `queue_items`.
- *
- * @columns
- *  - queueItemId : FK to the source queue item (CASCADE on delete)
- *  - clinicId    : Tenant, duplicative for faster analytics queries
- *  - waitDurationSeconds
- *  - consultDurationSeconds
- *  - createdAt / updatedAt : Audit
- *
- * @notes
- *  - We duplicate `clinicId` for composite indexing and because
- *    `queue_items` may be removed after 30 days retention.
- */
-
-import { integer, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
-
-import { clinicsTable } from "./clinics-schema"
-import { queueItemsTable } from "./queue-items-schema"
-
-export const consultHistoryTable = pgTable("consult_history", {
-  id: uuid("id").defaultRandom().primaryKey(),
-
-  /** Original queue item for traceability */
-  queueItemId: uuid("queue_item_id")
-    .references(() => queueItemsTable.id, { onDelete: "cascade" })
-    .notNull(),
-
-  /** Tenant reference (duplicated for faster aggregation) */
-  clinicId: uuid("clinic_id")
-    .references(() => clinicsTable.id, { onDelete: "cascade" })
-    .notNull(),
-
-  /** Time between registration and consult start, in seconds */
-  waitDurationSeconds: integer("wait_duration_seconds").notNull(),
-
-  /** Time between consult start and completion, in seconds */
-  consultDurationSeconds: integer("consult_duration_seconds").notNull(),
-
-  /** Audit timestamps */
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date())
-})
-
-export type InsertConsultHistory = typeof consultHistoryTable.$inferInsert
-export type SelectConsultHistory = typeof consultHistoryTable.$inferSelect
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/profiles-schema.ts
-/*
-Defines the database schema for profiles.
-*/
-
-import { pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core"
-
-export const membershipEnum = pgEnum("membership", ["free", "pro"])
-
-export const profilesTable = pgTable("profiles", {
-  userId: text("user_id").primaryKey().notNull(),
-  membership: membershipEnum("membership").notNull().default("free"),
-  stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date())
-})
-
-export type InsertProfile = typeof profilesTable.$inferInsert
-export type SelectProfile = typeof profilesTable.$inferSelect
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/index.ts
-/**
- * @file index.ts
- *
- * @description
- *  Barrel file that re‑exports every Drizzle schema in `db/schema`.
- *  The order of exports is not important but keeping them alphabetical
- *  improves merge resolution.
- */
-
-export * from "./clinics-schema"
-export * from "./clinic-settings-schema"
-export * from "./consult-history-schema"
-export * from "./profiles-schema"
-export * from "./queue-items-schema"
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/clinics-schema.ts
-/**
- * @file clinics-schema.ts
- *
- * @description
- *  Drizzle ORM table definition for **`clinics`**—the top‑level tenant
- *  entity that owns queue items, settings, and analytics.
- *
- *  Every other domain table contains a `clinicId` FK that cascades on delete,
- *  allowing a single statement to purge all clinic‑scoped data if a clinic is
- *  removed from the platform.
- *
- * @columns
- *  - id          : Primary UUID identifier (generated server‑side)
- *  - name        : Human‑readable clinic name (required)
- *  - createdAt   : Record creation timestamp (default = now)
- *  - updatedAt   : Record update timestamp (auto‑updated on mutation)
- *
- * @notes
- *  - We **always** include an `updatedAt` column (project rule) even when
- *    it is not explicitly mentioned in the spec.
- *  - Indexing `name` is optional at this stage; query volume for clinic
- *    listing is expected to be low. We will add indexes when analytics
- *    warrants it.
- */
-
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
-
-export const clinicsTable = pgTable("clinics", {
-  /** Primary key — generated UUID */
-  id: uuid("id").defaultRandom().primaryKey(),
-
-  /** Display name of the clinic */
-  name: text("name").notNull(),
-
-  /** Record creation timestamp */
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-
-  /**
-   * Record last‑update timestamp
-   * Automatically updates on every mutation via `$onUpdate`.
-   */
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date())
-})
-
-/** Insert type for `clinicsTable` (used when creating a new clinic) */
-export type InsertClinic = typeof clinicsTable.$inferInsert
-
-/** Select type for `clinicsTable` (used when reading a clinic) */
-export type SelectClinic = typeof clinicsTable.$inferSelect
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/api/stripe/webhooks/route.ts
 /*
 This API route handles Stripe webhook events to manage subscription status changes and updates user profiles accordingly.
@@ -4603,6 +4584,52 @@ async function handleCheckoutSession(event: Stripe.Event) {
 }
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
+/*
+This client page provides the login form from Clerk.
+*/
+
+"use client"
+
+import { SignIn } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function LoginPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignIn
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
+/*
+This client page provides the signup form from Clerk.
+*/
+
+"use client"
+
+import { SignUp } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function SignUpPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignUp
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/_components/contact-form.tsx
 "use client"
 
@@ -4693,52 +4720,6 @@ export default function ContactForm() {
         </Button>
       </form>
     </Form>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
-/*
-This client page provides the login form from Clerk.
-*/
-
-"use client"
-
-import { SignIn } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function LoginPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignIn
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
-/*
-This client page provides the signup form from Clerk.
-*/
-
-"use client"
-
-import { SignUp } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function SignUpPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignUp
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
   )
 }
 
