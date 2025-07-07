@@ -2,7 +2,7 @@
  * @file app/q/[queueId]/page.tsx
  *
  * @description
- * This file defines the dynamic server page for viewing a single patient's
+ * This file defines the server page for viewing a single patient's
  * queue status. It fetches data based on the `queueId` provided in the URL.
  */
 "use server"
@@ -12,17 +12,22 @@ import PatientQueueView from "./_components/patient-queue-view"
 import { getPublicQueueItemDetailsAction } from "@/actions/db/queue_items_actions"
 
 interface PatientQueuePageProps {
-  params: {
+  // Per Next.js 15+, params in dynamic server pages are a Promise
+  params: Promise<{
     queueId: string
-  }
+  }>
 }
 
 /**
- * The primary server component for the dynamic `/q/[queueId]` route.
+ * The primary server component for the dynamic `/q/[queueId]` route. It awaits
+ * the params and then uses a Suspense boundary to handle loading states.
  */
 export default async function PatientQueuePage({
   params
 }: PatientQueuePageProps) {
+  // Await the params promise to get the resolved value
+  const { queueId } = await params
+
   return (
     <Suspense
       fallback={
@@ -31,13 +36,13 @@ export default async function PatientQueuePage({
         </div>
       }
     >
-      <PatientQueueFetcher queueId={params.queueId} />
+      <PatientQueueFetcher queueId={queueId} />
     </Suspense>
   )
 }
 
 /**
- * An async server component responsible for fetching the specific patient's
+ * An asynchronous server component responsible for fetching the specific patient's
  * queue data and passing it to the display component.
  */
 async function PatientQueueFetcher({ queueId }: { queueId: string }) {

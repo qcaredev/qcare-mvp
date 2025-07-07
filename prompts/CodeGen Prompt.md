@@ -1720,27 +1720,13 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 
 ## 6 – Patient Public Page
 - [X] **Step 6.1: Route**
-  - **Task**: `app/q/[queueId]/page.tsx` – shows live position & wait‑time, auto‑refresh via Supabase Realtime.
-  - **Files**:  
-    - `app/q/[queueId]/page.tsx`
-  - **Step Dependencies**: 1.1
 
 ## 7 – Supabase Realtime Integration
-- [ ] **Step 7.1: Realtime client util**
-  - **Task**: `lib/supabase-client.ts` singleton; subscribe to `queue_items`.
-  - **Files**:  
-    - `lib/supabase-client.ts`
-  - **Step Dependencies**: 0.1
-
-- [ ] **Step 7.2: Hook in dashboards**
-  - **Task**: Add useEffect in Kanban & doctor list to update local state on realtime events.
-  - **Files**:  
-    - `app/reception/_components/queue-kanban.tsx`
-    - `app/doctor/_components/next-up-list.tsx` _(new)_
-  - **Step Dependencies**: 7.1
+- [X] **Step 7.1: Realtime client util**
+- [X] **Step 7.2: Hook in dashboards**
 
 ## 8 – Admin & Analytics
-- [ ] **Step 8.1: Analytics queries**
+- [X] **Step 8.1: Analytics queries**
   - **Task**: `actions/db/analytics-actions.ts` – daily avg wait, CSV export.
   - **Files**:  
     - `actions/db/analytics-actions.ts`
@@ -4139,6 +4125,62 @@ export type InsertClinic = typeof clinicsTable.$inferInsert
 export type SelectClinic = typeof clinicsTable.$inferSelect
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/about/page.tsx
+/*
+This server page displays information about the company, mission, and team.
+*/
+
+"use server"
+
+import { Card, CardContent } from "@/components/ui/card"
+
+export default async function AboutPage() {
+  return (
+    <div className="container mx-auto py-12">
+      <h1 className="mb-8 text-center text-4xl font-bold">About Us</h1>
+
+      <div className="space-y-8">
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Our Story</h2>
+            <p className="text-muted-foreground">
+              We are passionate about building tools that help people work
+              smarter and achieve more. Our platform combines cutting-edge
+              technology with intuitive design to create a seamless experience
+              for our users.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
+            <p className="text-muted-foreground">
+              Our mission is to empower individuals and organizations with
+              innovative solutions that drive productivity and success. We
+              believe in creating technology that adapts to how people work, not
+              the other way around.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Core Values</h2>
+            <ul className="text-muted-foreground list-inside list-disc space-y-2">
+              <li>Innovation in everything we do</li>
+              <li>Customer success is our success</li>
+              <li>Transparency and trust</li>
+              <li>Continuous improvement</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
 /*
 This server page displays the main features and capabilities of the product.
@@ -4222,62 +4264,6 @@ export default async function FeaturesPage() {
         {features.map((feature, index) => (
           <Feature key={index} {...feature} />
         ))}
-      </div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/about/page.tsx
-/*
-This server page displays information about the company, mission, and team.
-*/
-
-"use server"
-
-import { Card, CardContent } from "@/components/ui/card"
-
-export default async function AboutPage() {
-  return (
-    <div className="container mx-auto py-12">
-      <h1 className="mb-8 text-center text-4xl font-bold">About Us</h1>
-
-      <div className="space-y-8">
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Our Story</h2>
-            <p className="text-muted-foreground">
-              We are passionate about building tools that help people work
-              smarter and achieve more. Our platform combines cutting-edge
-              technology with intuitive design to create a seamless experience
-              for our users.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
-            <p className="text-muted-foreground">
-              Our mission is to empower individuals and organizations with
-              innovative solutions that drive productivity and success. We
-              believe in creating technology that adapts to how people work, not
-              the other way around.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Core Values</h2>
-            <ul className="text-muted-foreground list-inside list-disc space-y-2">
-              <li>Innovation in everything we do</li>
-              <li>Customer success is our success</li>
-              <li>Transparency and trust</li>
-              <li>Continuous improvement</li>
-            </ul>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )
@@ -4584,29 +4570,6 @@ async function handleCheckoutSession(event: Stripe.Event) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
-/*
-This client page provides the login form from Clerk.
-*/
-
-"use client"
-
-import { SignIn } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function LoginPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignIn
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
 /*
 This client page provides the signup form from Clerk.
@@ -4623,6 +4586,29 @@ export default function SignUpPage() {
 
   return (
     <SignUp
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
+/*
+This client page provides the login form from Clerk.
+*/
+
+"use client"
+
+import { SignIn } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function LoginPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignIn
       forceRedirectUrl="/"
       appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
     />

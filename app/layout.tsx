@@ -1,17 +1,17 @@
-/*
-The root server layout for the app.
-*/
+/**
+ * @file layout.tsx
+ *
+ * @description
+ * The root server layout for the app. This version is simplified to remove
+ * the global auth() call that was causing middleware conflicts.
+ */
+// The "use server" directive has been removed from here.
 
-import {
-  createProfileAction,
-  getProfileByUserIdAction
-} from "@/actions/db/profiles-actions"
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/utilities/providers"
 import { TailwindIndicator } from "@/components/utilities/tailwind-indicator"
 import { cn } from "@/lib/utils"
 import { ClerkProvider } from "@clerk/nextjs"
-import { auth } from "@clerk/nextjs/server"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -19,24 +19,15 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Receipt AI",
-  description: "A full-stack web app template."
+  title: "QCare",
+  description: "A real-time queue management system."
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children
 }: {
   children: React.ReactNode
 }) {
-  const { userId } = await auth()
-
-  if (userId) {
-    const profileRes = await getProfileByUserIdAction(userId)
-    if (!profileRes.isSuccess) {
-      await createProfileAction({ userId })
-    }
-  }
-
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
@@ -53,9 +44,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             {children}
-
             <TailwindIndicator />
-
             <Toaster />
           </Providers>
         </body>

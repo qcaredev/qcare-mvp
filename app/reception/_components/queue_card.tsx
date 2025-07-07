@@ -5,19 +5,6 @@
  * This client component renders a single patient card for the Kanban board.
  * It displays essential patient information and provides action buttons that
  * trigger callback functions passed down as props.
- *
- * @props
- * - `item`: A `SelectQueueItem` object containing the patient's data.
- * - `onAdvance`: Callback function to advance the item to the next status.
- * - `onCancel`: Callback function to mark the item as cancelled.
- * - `onNotify`: Callback function to send a notification.
- * - `isOverlay`: (Optional) A boolean to indicate if the card is being
- * rendered in a drag overlay.
- *
- * @dependencies
- * - `shadcn/ui`: For Card and Button components.
- * - `lucide-react`: For icons.
- * - `date-fns`: For formatting the waiting time.
  */
 "use client"
 
@@ -33,6 +20,24 @@ import { SelectQueueItem } from "@/db/schema"
 import { cn } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
 import { Bell, Check, User, X } from "lucide-react"
+import { useEffect, useState } from "react"
+
+// This component safely renders a relative time string on the client
+// to prevent hydration mismatch errors.
+function RelativeTime({ date }: { date: Date | string | null | undefined }) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted || !date) {
+    return null // Don't render on the server or if date is null
+  }
+
+  // This will only run on the client
+  return <>{formatDistanceToNow(new Date(date), { addSuffix: true })}</>
+}
 
 interface QueueCardProps {
   item: SelectQueueItem
@@ -95,8 +100,7 @@ export default function QueueCard({
         )}
 
         <p className="text-muted-foreground pt-1 text-xs">
-          Waiting:{" "}
-          {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+          Waiting: <RelativeTime date={item.createdAt} />
         </p>
       </CardContent>
 

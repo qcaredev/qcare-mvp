@@ -3,17 +3,8 @@
  *
  * @description
  * This client component renders the main Kanban-style board for the reception
- * dashboard. It receives initial queue data from the parent server component and
- * handles all drag-and-drop interactions for reordering and updating the status
- * of patients in the queue. It uses the `useQueueMutations` hook to communicate
- * changes to the server.
- *
- * @dependencies
- * - `@dnd-kit/core`: Core library for drag-and-drop functionality.
- * - `react`: For state and lifecycle management.
- * - `react-dom`: For `createPortal` used with `<DragOverlay>`.
- * - `./queue-card.tsx`: The component for rendering individual patient cards.
- * - `./use-queue-mutations.ts`: The custom hook for server-side mutations.
+ * dashboard. It receives initial queue data and then subscribes to real-time
+ * updates from Supabase to keep the board synchronized across all clients.
  */
 "use client"
 
@@ -28,6 +19,11 @@ import {
   useSensor,
   useSensors
 } from "@dnd-kit/core"
+import { arrayMove } from "@dnd-kit/sortable"
+import {
+  RealtimeChannel,
+  RealtimePostgresChangesPayload
+} from "@supabase/supabase-js"
 import { SelectQueueItem, queueStatusEnum } from "@/db/schema"
 import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
@@ -35,6 +31,7 @@ import QueueCard from "./queue_card"
 import { useQueueMutations } from "./use_queue_mutations"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabase-client"
 
 export type GroupedQueueItems = {
   [key in (typeof queueStatusEnum.enumValues)[number]]?: SelectQueueItem[]
@@ -55,6 +52,86 @@ export default function QueueKanban({ initialData }: QueueKanbanProps) {
 
   useEffect(() => {
     setIsMounted(true)
+
+    const handleRealtimeUpdate = (
+      payload: RealtimePostgresChangesPayload<{ [key: string]: any }>
+    ) => {
+      setItems(currentItems => {
+        const newItems = JSON.parse(JSON.stringify(currentItems))
+        const { eventType, new: newItem, old } = payload
+
+        if (eventType === "INSERT") {
+          const inserted = newItem as SelectQueueItem
+          if (!newItems[inserted.status!]) newItems[inserted.status!] = []
+          newItems[inserted.status!]!.push(inserted)
+          newItems[inserted.status!]!.sort(
+            (a: SelectQueueItem, b: SelectQueueItem) =>
+              a.position! - b.position!
+          )
+          return newItems
+        }
+
+        if (eventType === "UPDATE") {
+          const updated = newItem as Partial<SelectQueueItem>
+          let existingItem: SelectQueueItem | null = null
+
+          for (const status of KANBAN_COLUMNS) {
+            const items = newItems[status]
+            if (items) {
+              const itemIndex = items.findIndex(
+                (i: SelectQueueItem) => i.id === old.id
+              )
+              if (itemIndex !== -1) {
+                ;[existingItem] = items.splice(itemIndex, 1)
+                break
+              }
+            }
+          }
+
+          if (existingItem) {
+            const mergedItem = {
+              ...existingItem,
+              ...updated
+            } as SelectQueueItem
+            const targetStatus = mergedItem.status!
+
+            if (!newItems[targetStatus]) newItems[targetStatus] = []
+            newItems[targetStatus].push(mergedItem)
+            newItems[targetStatus].sort(
+              (a: SelectQueueItem, b: SelectQueueItem) =>
+                a.position! - b.position!
+            )
+          }
+          return newItems
+        }
+
+        if (eventType === "DELETE") {
+          for (const status of KANBAN_COLUMNS) {
+            if (newItems[status]) {
+              newItems[status] = newItems[status]!.filter(
+                (i: SelectQueueItem) => i.id !== old.id
+              )
+            }
+          }
+          return newItems
+        }
+
+        return currentItems
+      })
+    }
+
+    const channel: RealtimeChannel = supabase
+      .channel("queue-updates")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "queue_items" },
+        handleRealtimeUpdate
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const sensors = useSensors(
@@ -74,77 +151,36 @@ export default function QueueKanban({ initialData }: QueueKanbanProps) {
     const { active, over } = event
     setActiveItem(null)
 
-    if (!over) return
-    if (active.id === over.id) return
+    if (!over || active.id === over.id) return
 
     const activeId = active.id as string
-    const overId = over.id as string
 
     const activeContainer = findContainerById(activeId)
-    const overContainer = findContainerById(overId)
+    const overContainer = findContainerById(over.id as string)
 
-    if (!activeContainer || !overContainer || !activeItem) return
+    if (!activeContainer || !overContainer) return
 
-    if (activeContainer !== overContainer) {
-      // --- Move to a different column ---
-      setItems(prev => {
-        const activeItems = prev[activeContainer]
-          ? [...prev[activeContainer]!]
-          : []
-        const overItems = prev[overContainer] ? [...prev[overContainer]!] : []
+    if (activeContainer === overContainer) {
+      const currentItems = items[activeContainer]!
+      const activeIndex = currentItems.findIndex(
+        (i: SelectQueueItem) => i.id === activeId
+      )
+      const overIndex = currentItems.findIndex(
+        (i: SelectQueueItem) => i.id === over.id
+      )
 
-        const activeIndex = activeItems.findIndex(i => i.id === activeId)
-        const overIndex = overItems.findIndex(i => i.id === overId)
-
-        const [movedItem] = activeItems.splice(activeIndex, 1)
-        overItems.splice(
-          overIndex >= 0 ? overIndex : overItems.length,
-          0,
-          movedItem
+      if (activeIndex !== overIndex) {
+        const reordered = arrayMove(currentItems, activeIndex, overIndex)
+        const itemsToUpdate = reordered.map(
+          (item: SelectQueueItem, index: number) => ({
+            id: item.id,
+            position: index
+          })
         )
-
-        const newItems = { ...prev }
-        newItems[activeContainer] = activeItems.map((item, index) => ({
-          ...item,
-          position: index
-        }))
-        newItems[overContainer] = overItems.map((item, index) => ({
-          ...item,
-          status: overContainer,
-          position: index
-        }))
-
-        return newItems
-      })
-
-      updateStatusMutation(activeId, overContainer)
+        reorderQueueMutation(itemsToUpdate)
+      }
     } else {
-      // --- Reorder in the same column ---
-      setItems(prev => {
-        const currentItems = prev[activeContainer]
-          ? [...prev[activeContainer]!]
-          : []
-        const activeIndex = currentItems.findIndex(i => i.id === activeId)
-        const overIndex = currentItems.findIndex(i => i.id === overId)
-
-        const [movedItem] = currentItems.splice(activeIndex, 1)
-        currentItems.splice(overIndex, 0, movedItem)
-
-        const newItems = { ...prev }
-        newItems[activeContainer] = currentItems.map((item, index) => ({
-          ...item,
-          position: index
-        }))
-
-        reorderQueueMutation(
-          newItems[activeContainer]!.map(({ id, position }) => ({
-            id,
-            position: position!
-          }))
-        )
-
-        return newItems
-      })
+      updateStatusMutation(activeId, overContainer)
     }
   }
 
@@ -164,12 +200,11 @@ export default function QueueKanban({ initialData }: QueueKanbanProps) {
   const handleNotify = (id: string) => {
     const item = findItemById(id)
     toast(`Sending reminder to ${item?.patientName}...`)
-    // TODO: wire up to sendWhatsAppMessageAction
   }
 
   const findItemById = (id: string): SelectQueueItem | null => {
     for (const status of KANBAN_COLUMNS) {
-      const item = items[status]?.find(i => i.id === id)
+      const item = items[status]?.find((i: SelectQueueItem) => i.id === id)
       if (item) return item
     }
     return null
@@ -199,7 +234,7 @@ export default function QueueKanban({ initialData }: QueueKanbanProps) {
           ))}
         </QueueColumn>
       )),
-    [items]
+    [items, handleAdvance, handleCancel, handleNotify]
   )
 
   return (
@@ -259,7 +294,6 @@ function QueueColumn({
   )
 }
 
-// Explicitly define props for the draggable card wrapper for type safety
 interface DraggableQueueCardProps {
   item: SelectQueueItem
   onAdvance: (id: string) => void
