@@ -1693,8 +1693,6 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 
 # Implementation Plan
 
-# Implementation Plan
-
 ## 0 – Bootstrap & Configuration
 - [X] **Step 0.1: Install runtime dependencies**
   - **Task**: Add Supabase client, Twilio, Drag-and-Drop kit, csv-stringify.
@@ -1766,7 +1764,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
   - **Step Dependencies**: 2.2
 
 ## 3 – Server Actions (Twilio)
-- [ ] **Step 3.1: sendWhatsAppMessageAction**
+- [X] **Step 3.1: sendWhatsAppMessageAction**
   - **Task**: Wrapper around Twilio REST client. Handles errors & returns ActionState.
   - **Files**:  
     - `actions/twilio-actions.ts`: new file.
@@ -2943,301 +2941,6 @@ export async function deleteProfileAction(
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
-/*
-This server layout provides a centered layout for (auth) pages.
-*/
-
-"use server"
-
-interface AuthLayoutProps {
-  children: React.ReactNode
-}
-
-export default async function AuthLayout({ children }: AuthLayoutProps) {
-  return (
-    <div className="flex h-screen items-center justify-center">{children}</div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
-/*
-Hook to check if the user is on a mobile device.
-*/
-
-import * as React from "react"
-
-const MOBILE_BREAKPOINT = 768
-
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return !!isMobile
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
-/*
-Hook for copying text to the clipboard.
-*/
-
-"use client"
-
-import { useState } from "react"
-
-export interface useCopyToClipboardProps {
-  timeout?: number
-}
-
-export function useCopyToClipboard({
-  timeout = 2000
-}: useCopyToClipboardProps) {
-  const [isCopied, setIsCopied] = useState<Boolean>(false)
-
-  const copyToClipboard = (value: string) => {
-    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
-      return
-    }
-
-    if (!value) {
-      return
-    }
-
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true)
-
-      setTimeout(() => {
-        setIsCopied(false)
-      }, timeout)
-    })
-  }
-
-  return { isCopied, copyToClipboard }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
-/*
-Hook to display toast notifications.
-*/
-
-"use client"
-
-// Inspired by react-hot-toast library
-import * as React from "react"
-
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
-type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-}
-
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST"
-} as const
-
-let count = 0
-
-function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
-}
-
-type ActionType = typeof actionTypes
-
-type Action =
-  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
-  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
-  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
-  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
-
-interface State {
-  toasts: ToasterToast[]
-}
-
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
-  }, TOAST_REMOVE_DELAY)
-
-  toastTimeouts.set(toastId, timeout)
-}
-
-export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
-      }
-
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        )
-      }
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach(toast => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
-        )
-      }
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return { ...state, toasts: [] }
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter(t => t.id !== action.toastId)
-      }
-  }
-}
-
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach(listener => {
-    listener(memoryState)
-  })
-}
-
-type Toast = Omit<ToasterToast, "id">
-
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: open => {
-        if (!open) dismiss()
-      }
-    }
-  })
-
-  return { id: id, dismiss, update }
-}
-
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
-
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [state])
-
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
-  }
-}
-
-export { toast, useToast }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/layout.tsx
-/*
-This server layout provides a shared header and basic structure for (marketing) routes.
-*/
-
-"use server"
-
-import { Footer } from "@/components/landing/footer"
-import Header from "@/components/landing/header"
-
-export default async function MarketingLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <div className="flex-1">{children}</div>
-      <Footer />
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/page.tsx
-/*
-This server page is the marketing homepage.
-*/
-
-"use server"
-
-import { HeroSection } from "@/components/landing/hero"
-
-export default async function HomePage() {
-  return (
-    <div className="pb-20">
-      <HeroSection />
-    </div>
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/components/landing/hero.tsx
 /*
 This client component provides the hero section for the landing page.
@@ -3827,6 +3530,258 @@ export default function HeroVideoDialog({
 }
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
+/*
+Hook to check if the user is on a mobile device.
+*/
+
+import * as React from "react"
+
+const MOBILE_BREAKPOINT = 768
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
+/*
+Hook for copying text to the clipboard.
+*/
+
+"use client"
+
+import { useState } from "react"
+
+export interface useCopyToClipboardProps {
+  timeout?: number
+}
+
+export function useCopyToClipboard({
+  timeout = 2000
+}: useCopyToClipboardProps) {
+  const [isCopied, setIsCopied] = useState<Boolean>(false)
+
+  const copyToClipboard = (value: string) => {
+    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
+      return
+    }
+
+    if (!value) {
+      return
+    }
+
+    navigator.clipboard.writeText(value).then(() => {
+      setIsCopied(true)
+
+      setTimeout(() => {
+        setIsCopied(false)
+      }, timeout)
+    })
+  }
+
+  return { isCopied, copyToClipboard }
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
+/*
+Hook to display toast notifications.
+*/
+
+"use client"
+
+// Inspired by react-hot-toast library
+import * as React from "react"
+
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST"
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
+  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
+  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
+  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        )
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach(toast => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
+        )
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return { ...state, toasts: [] }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter(t => t.id !== action.toastId)
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach(listener => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: open => {
+        if (!open) dismiss()
+      }
+    }
+  })
+
+  return { id: id, dismiss, update }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
+  }
+}
+
+export { toast, useToast }
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
+/*
+This server layout provides a centered layout for (auth) pages.
+*/
+
+"use server"
+
+interface AuthLayoutProps {
+  children: React.ReactNode
+}
+
+export default async function AuthLayout({ children }: AuthLayoutProps) {
+  return (
+    <div className="flex h-screen items-center justify-center">{children}</div>
+  )
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
 /*
 This server component provides a tailwind indicator for the app in dev mode.
@@ -3911,6 +3866,49 @@ export const Providers = ({ children, ...props }: ThemeProviderProps) => {
     <NextThemesProvider {...props}>
       <TooltipProvider>{children}</TooltipProvider>
     </NextThemesProvider>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/layout.tsx
+/*
+This server layout provides a shared header and basic structure for (marketing) routes.
+*/
+
+"use server"
+
+import { Footer } from "@/components/landing/footer"
+import Header from "@/components/landing/header"
+
+export default async function MarketingLayout({
+  children
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <div className="flex-1">{children}</div>
+      <Footer />
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/page.tsx
+/*
+This server page is the marketing homepage.
+*/
+
+"use server"
+
+import { HeroSection } from "@/components/landing/hero"
+
+export default async function HomePage() {
+  return (
+    <div className="pb-20">
+      <HeroSection />
+    </div>
   )
 }
 
@@ -4226,6 +4224,95 @@ export type InsertClinic = typeof clinicsTable.$inferInsert
 export type SelectClinic = typeof clinicsTable.$inferSelect
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
+/*
+This server page displays the main features and capabilities of the product.
+*/
+
+"use server"
+
+import { Card, CardContent } from "@/components/ui/card"
+import { BarChart, Clock, Settings, Shield, Users, Zap } from "lucide-react"
+
+interface FeatureProps {
+  title: string
+  description: string
+  icon: React.ReactNode
+}
+
+function Feature({ title, description, icon }: FeatureProps) {
+  return (
+    <Card>
+      <CardContent className="flex items-start gap-4 pt-6">
+        <div className="bg-primary text-primary-foreground rounded-lg p-2">
+          {icon}
+        </div>
+        <div>
+          <h3 className="mb-2 font-semibold">{title}</h3>
+          <p className="text-muted-foreground text-sm">{description}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default async function FeaturesPage() {
+  const features: FeatureProps[] = [
+    {
+      title: "Lightning Fast",
+      description:
+        "Optimized performance for quick load times and smooth interactions.",
+      icon: <Zap className="size-5" />
+    },
+    {
+      title: "Enterprise Security",
+      description:
+        "Bank-grade encryption and security measures to protect your data.",
+      icon: <Shield className="size-5" />
+    },
+    {
+      title: "Customizable",
+      description:
+        "Flexible settings and configurations to match your workflow.",
+      icon: <Settings className="size-5" />
+    },
+    {
+      title: "Team Collaboration",
+      description:
+        "Built-in tools for seamless team coordination and communication.",
+      icon: <Users className="size-5" />
+    },
+    {
+      title: "Real-time Updates",
+      description: "Stay synchronized with instant updates and notifications.",
+      icon: <Clock className="size-5" />
+    },
+    {
+      title: "Advanced Analytics",
+      description:
+        "Comprehensive insights and reporting to track your progress.",
+      icon: <BarChart className="size-5" />
+    }
+  ]
+
+  return (
+    <div className="container mx-auto py-12">
+      <h1 className="mb-8 text-center text-4xl font-bold">Features</h1>
+      <p className="text-muted-foreground mx-auto mb-12 max-w-2xl text-center">
+        Discover the powerful features that make our platform the perfect
+        solution for your needs.
+      </p>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {features.map((feature, index) => (
+          <Feature key={index} {...feature} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/about/page.tsx
 /*
 This server page displays information about the company, mission, and team.
@@ -4277,6 +4364,49 @@ export default async function AboutPage() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/page.tsx
+/*
+This server page displays a contact form for users to get in touch.
+*/
+
+"use server"
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
+import ContactForm from "./_components/contact-form"
+
+export default async function ContactPage() {
+  return (
+    <div className="container mx-auto max-w-5xl px-4 py-12">
+      <div className="mx-auto mb-12 max-w-2xl text-center">
+        <h1 className="mb-4 text-4xl font-bold">Contact Us</h1>
+        <p className="text-muted-foreground">
+          Have a question or need help? Get in touch with our team.
+        </p>
+      </div>
+
+      <Card className="mx-auto max-w-xl">
+        <CardHeader>
+          <CardTitle>Send us a message</CardTitle>
+          <CardDescription>
+            Fill out the form below and we'll get back to you as soon as
+            possible.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ContactForm />
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -4442,138 +4572,6 @@ function PricingCard({
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
-/*
-This server page displays the main features and capabilities of the product.
-*/
-
-"use server"
-
-import { Card, CardContent } from "@/components/ui/card"
-import { BarChart, Clock, Settings, Shield, Users, Zap } from "lucide-react"
-
-interface FeatureProps {
-  title: string
-  description: string
-  icon: React.ReactNode
-}
-
-function Feature({ title, description, icon }: FeatureProps) {
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-4 pt-6">
-        <div className="bg-primary text-primary-foreground rounded-lg p-2">
-          {icon}
-        </div>
-        <div>
-          <h3 className="mb-2 font-semibold">{title}</h3>
-          <p className="text-muted-foreground text-sm">{description}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-export default async function FeaturesPage() {
-  const features: FeatureProps[] = [
-    {
-      title: "Lightning Fast",
-      description:
-        "Optimized performance for quick load times and smooth interactions.",
-      icon: <Zap className="size-5" />
-    },
-    {
-      title: "Enterprise Security",
-      description:
-        "Bank-grade encryption and security measures to protect your data.",
-      icon: <Shield className="size-5" />
-    },
-    {
-      title: "Customizable",
-      description:
-        "Flexible settings and configurations to match your workflow.",
-      icon: <Settings className="size-5" />
-    },
-    {
-      title: "Team Collaboration",
-      description:
-        "Built-in tools for seamless team coordination and communication.",
-      icon: <Users className="size-5" />
-    },
-    {
-      title: "Real-time Updates",
-      description: "Stay synchronized with instant updates and notifications.",
-      icon: <Clock className="size-5" />
-    },
-    {
-      title: "Advanced Analytics",
-      description:
-        "Comprehensive insights and reporting to track your progress.",
-      icon: <BarChart className="size-5" />
-    }
-  ]
-
-  return (
-    <div className="container mx-auto py-12">
-      <h1 className="mb-8 text-center text-4xl font-bold">Features</h1>
-      <p className="text-muted-foreground mx-auto mb-12 max-w-2xl text-center">
-        Discover the powerful features that make our platform the perfect
-        solution for your needs.
-      </p>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {features.map((feature, index) => (
-          <Feature key={index} {...feature} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/page.tsx
-/*
-This server page displays a contact form for users to get in touch.
-*/
-
-"use server"
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import ContactForm from "./_components/contact-form"
-
-export default async function ContactPage() {
-  return (
-    <div className="container mx-auto max-w-5xl px-4 py-12">
-      <div className="mx-auto mb-12 max-w-2xl text-center">
-        <h1 className="mb-4 text-4xl font-bold">Contact Us</h1>
-        <p className="text-muted-foreground">
-          Have a question or need help? Get in touch with our team.
-        </p>
-      </div>
-
-      <Card className="mx-auto max-w-xl">
-        <CardHeader>
-          <CardTitle>Send us a message</CardTitle>
-          <CardDescription>
-            Fill out the form below and we'll get back to you as soon as
-            possible.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ContactForm />
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/api/stripe/webhooks/route.ts
 /*
 This API route handles Stripe webhook events to manage subscription status changes and updates user profiles accordingly.
@@ -4671,29 +4669,6 @@ async function handleCheckoutSession(event: Stripe.Event) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
-/*
-This client page provides the login form from Clerk.
-*/
-
-"use client"
-
-import { SignIn } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function LoginPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignIn
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
 /*
 This client page provides the signup form from Clerk.
@@ -4710,6 +4685,29 @@ export default function SignUpPage() {
 
   return (
     <SignUp
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
+/*
+This client page provides the login form from Clerk.
+*/
+
+"use client"
+
+import { SignIn } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function LoginPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignIn
       forceRedirectUrl="/"
       appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
     />
@@ -4811,7 +4809,6 @@ export default function ContactForm() {
 }
 
 </file_contents>
-
 
 </existing_code>
 
