@@ -1732,7 +1732,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
     - `actions/db/analytics-actions.ts`
   - **Step Dependencies**: 2.3
 
-- [ ] **Step 8.2: Admin page**
+- [X] **Step 8.2: Admin page**
   - **Task**: `app/admin/page.tsx` – charts with recharts, CSV download button.
   - **Files**:  
     - `app/admin/page.tsx`
@@ -1885,7 +1885,7 @@ Contains middleware for protecting routes, checking user authentication, and red
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 
-const isProtectedRoute = createRouteMatcher(["/todo(.*)"])
+const isProtectedRoute = createRouteMatcher(["/reception(.*)", "/doctor(.*)", "/admin(.*)"])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, redirectToSignIn } = await auth()
@@ -2115,7 +2115,8 @@ File: /Users/dev/Desktop/project/qcare-mvp/package.json
     "@clerk/backend": "^1.24.0",
     "@clerk/nextjs": "^6.11.2",
     "@clerk/themes": "^2.2.17",
-    "@dnd-kit/core": "^5.0.3",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@hookform/resolvers": "^4.0.0",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -2179,8 +2180,8 @@ File: /Users/dev/Desktop/project/qcare-mvp/package.json
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22",
-    "@types/react": "^19.0",
-    "@types/react-dom": "^19.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.30.4",
     "eslint": "^9",
@@ -2192,7 +2193,6 @@ File: /Users/dev/Desktop/project/qcare-mvp/package.json
     "typescript": "^5"
   }
 }
-
 
 File: /Users/dev/Desktop/project/qcare-mvp/prettier.config.cjs
 /*
@@ -2501,20 +2501,20 @@ File: /Users/dev/Desktop/project/qcare-mvp/actions/stripe-actions.ts
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/app/layout.tsx
-/*
-The root server layout for the app.
-*/
+/**
+ * @file layout.tsx
+ *
+ * @description
+ * The root server layout for the app. This version is simplified to remove
+ * the global auth() call that was causing middleware conflicts.
+ */
+// The "use server" directive has been removed from here.
 
-import {
-  createProfileAction,
-  getProfileByUserIdAction
-} from "@/actions/db/profiles-actions"
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/utilities/providers"
 import { TailwindIndicator } from "@/components/utilities/tailwind-indicator"
 import { cn } from "@/lib/utils"
 import { ClerkProvider } from "@clerk/nextjs"
-import { auth } from "@clerk/nextjs/server"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -2522,24 +2522,15 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Receipt AI",
-  description: "A full-stack web app template."
+  title: "QCare",
+  description: "A real-time queue management system."
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children
 }: {
   children: React.ReactNode
 }) {
-  const { userId } = await auth()
-
-  if (userId) {
-    const profileRes = await getProfileByUserIdAction(userId)
-    if (!profileRes.isSuccess) {
-      await createProfileAction({ userId })
-    }
-  }
-
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
@@ -2556,9 +2547,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             {children}
-
             <TailwindIndicator />
-
             <Toaster />
           </Providers>
         </body>
@@ -3665,24 +3654,6 @@ export async function deleteProfileAction(
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
-/*
-This server layout provides a centered layout for (auth) pages.
-*/
-
-"use server"
-
-interface AuthLayoutProps {
-  children: React.ReactNode
-}
-
-export default async function AuthLayout({ children }: AuthLayoutProps) {
-  return (
-    <div className="flex h-screen items-center justify-center">{children}</div>
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
 /*
 This server component provides a tailwind indicator for the app in dev mode.
@@ -3810,6 +3781,24 @@ export default async function HomePage() {
     <div className="pb-20">
       <HeroSection />
     </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
+/*
+This server layout provides a centered layout for (auth) pages.
+*/
+
+"use server"
+
+interface AuthLayoutProps {
+  children: React.ReactNode
+}
+
+export default async function AuthLayout({ children }: AuthLayoutProps) {
+  return (
+    <div className="flex h-screen items-center justify-center">{children}</div>
   )
 }
 
@@ -4125,62 +4114,6 @@ export type InsertClinic = typeof clinicsTable.$inferInsert
 export type SelectClinic = typeof clinicsTable.$inferSelect
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/about/page.tsx
-/*
-This server page displays information about the company, mission, and team.
-*/
-
-"use server"
-
-import { Card, CardContent } from "@/components/ui/card"
-
-export default async function AboutPage() {
-  return (
-    <div className="container mx-auto py-12">
-      <h1 className="mb-8 text-center text-4xl font-bold">About Us</h1>
-
-      <div className="space-y-8">
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Our Story</h2>
-            <p className="text-muted-foreground">
-              We are passionate about building tools that help people work
-              smarter and achieve more. Our platform combines cutting-edge
-              technology with intuitive design to create a seamless experience
-              for our users.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
-            <p className="text-muted-foreground">
-              Our mission is to empower individuals and organizations with
-              innovative solutions that drive productivity and success. We
-              believe in creating technology that adapts to how people work, not
-              the other way around.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Core Values</h2>
-            <ul className="text-muted-foreground list-inside list-disc space-y-2">
-              <li>Innovation in everything we do</li>
-              <li>Customer success is our success</li>
-              <li>Transparency and trust</li>
-              <li>Continuous improvement</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
 /*
 This server page displays the main features and capabilities of the product.
@@ -4430,6 +4363,62 @@ function PricingCard({
 }
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/about/page.tsx
+/*
+This server page displays information about the company, mission, and team.
+*/
+
+"use server"
+
+import { Card, CardContent } from "@/components/ui/card"
+
+export default async function AboutPage() {
+  return (
+    <div className="container mx-auto py-12">
+      <h1 className="mb-8 text-center text-4xl font-bold">About Us</h1>
+
+      <div className="space-y-8">
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Our Story</h2>
+            <p className="text-muted-foreground">
+              We are passionate about building tools that help people work
+              smarter and achieve more. Our platform combines cutting-edge
+              technology with intuitive design to create a seamless experience
+              for our users.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
+            <p className="text-muted-foreground">
+              Our mission is to empower individuals and organizations with
+              innovative solutions that drive productivity and success. We
+              believe in creating technology that adapts to how people work, not
+              the other way around.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Core Values</h2>
+            <ul className="text-muted-foreground list-inside list-disc space-y-2">
+              <li>Innovation in everything we do</li>
+              <li>Customer success is our success</li>
+              <li>Transparency and trust</li>
+              <li>Continuous improvement</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/page.tsx
 /*
 This server page displays a contact form for users to get in touch.
@@ -4570,52 +4559,6 @@ async function handleCheckoutSession(event: Stripe.Event) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
-/*
-This client page provides the signup form from Clerk.
-*/
-
-"use client"
-
-import { SignUp } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function SignUpPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignUp
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
-/*
-This client page provides the login form from Clerk.
-*/
-
-"use client"
-
-import { SignIn } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function LoginPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignIn
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/_components/contact-form.tsx
 "use client"
 
@@ -4709,7 +4652,54 @@ export default function ContactForm() {
   )
 }
 
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
+/*
+This client page provides the signup form from Clerk.
+*/
+
+"use client"
+
+import { SignUp } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function SignUpPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignUp
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
+/*
+This client page provides the login form from Clerk.
+*/
+
+"use client"
+
+import { SignIn } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function LoginPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignIn
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
 </file_contents>
+
 
 
 </existing_code>

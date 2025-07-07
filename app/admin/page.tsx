@@ -3,7 +3,7 @@
  *
  * @description
  * This file defines the server page for the Admin Dashboard. It fetches all
- * necessary analytics data and passes it to a client component for display.
+ * necessary analytics and passes it to a client component for display.
  */
 "use server"
 
@@ -39,11 +39,11 @@ export default async function AdminPage() {
 }
 
 /**
- * An async server component that fetches the summary data required for the admin
+ * An async server component that fetches all data required for the admin
  * dashboard and passes it to the client component.
  */
 async function AnalyticsDataFetcher() {
-  // NOTE: This is a placeholder. In a multi-tenant application, this ID would
+  // NOTE: This is a placeholder. In a real application, this ID would
   // be dynamically retrieved from the authenticated user's session or profile.
   const MOCK_CLINIC_ID = "c7e2b8a0-3b7a-4b1e-8e0a-9e0e3e7f1b2a"
 
