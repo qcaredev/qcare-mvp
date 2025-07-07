@@ -1695,83 +1695,22 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 
 ## 0 – Bootstrap & Configuration
 - [X] **Step 0.1: Install runtime dependencies**
-  - **Task**: Add Supabase client, Twilio, Drag-and-Drop kit, csv-stringify.
-  - **Files**:  
-    - `package.json`: add `@supabase/supabase-js`, `twilio`, `@dnd-kit/core`, `csv-stringify`.
-  - **Step Dependencies**: none
-  - **User Instructions**:  
-    ```bash
-    npm install @supabase/supabase-js twilio @dnd-kit/core csv-stringify
-    ```
-
 - [X] **Step 0.2: Extend environment variables**
-  - **Task**: Update `.env.example` with Supabase/Twilio keys + new settings.
-  - **Files**:  
-    - `.env.example`: add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `TWILIO_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `WAIT_ESTIMATE_SAMPLE_SIZE=5`.
-  - **Step Dependencies**: 0.1  
-  - **User Instructions**: Copy values to `.env.local`.
 
 ## 1 – Database Schema
 - [X] **Step 1.1: Define enums & tables**
-  - **Task**: Create Drizzle schema files for `clinics`, `queue_items`, `consult_history`, `clinic_settings`.
-  - **Files**:  
-    - `db/schema/clinics-schema.ts`  
-    - `db/schema/queue-items-schema.ts`  
-    - `db/schema/consult-history-schema.ts`  
-    - `db/schema/clinic-settings-schema.ts`  
-    - `db/schema/index.ts`: export new tables  
-    - `db/db.ts`: add tables to `schema` object
-  - **Step Dependencies**: 0.2
-  - **User Instructions**: Run `npx drizzle-kit generate && npx drizzle-kit migrate`.
-
 - [X] **Step 1.2: SQL for RLS & Realtime**
-  - **Task**: Provide SQL to enable RLS & realtime on new tables.
-  - **Files**: _Documentation only_ (no code files)
-  - **Step Dependencies**: 1.1
-  - **User Instructions**:  
-    ```sql
-    -- Enable Realtime
-    alter table queue_items replica identity full;
-    begin;
-      alter publication supabase_realtime add table queue_items;
-    commit;
-
-    -- RLS (everyone read; only service role write for now)
-    alter table queue_items enable row level security;
-    create policy "read queue" on queue_items
-      for select using (true);
-    ```
 
 ## 2 – Server Actions (Database)
 - [X] **Step 2.1: createQueueItemAction**
-  - **Task**: Insert patient row, compute `position`, return row.
-  - **Files**:  
-    - `actions/db/queue-items-actions.ts`: new file with createQueueItemAction.
-    - `types/actions-types.ts`: add Queue related types if necessary.
-  - **Step Dependencies**: 1.1
-
 - [X] **Step 2.2: reorderQueueAction**
-  - **Task**: Update `position` for an array of ids in a transaction.
-  - **Files**:  
-    - `actions/db/queue-items-actions.ts`: add function.
-  - **Step Dependencies**: 2.1
-
 - [X] **Step 2.3: updateQueueStatusAction**
-  - **Task**: Move item to new status, record wait/consult durations when COMPLETE.
-  - **Files**:  
-    - `actions/db/queue-items-actions.ts`: extend file.
-    - `actions/db/consult-history-actions.ts`: new file for insert.
-  - **Step Dependencies**: 2.2
 
 ## 3 – Server Actions (Twilio)
 - [X] **Step 3.1: sendWhatsAppMessageAction**
-  - **Task**: Wrapper around Twilio REST client. Handles errors & returns ActionState.
-  - **Files**:  
-    - `actions/twilio-actions.ts`: new file.
-  - **Step Dependencies**: 0.2
 
 ## 4 – Reception Dashboard
-- [ ] **Step 4.1: Route & Server Page**
+- [X] **Step 4.1: Route & Server Page**
   - **Task**: Create `app/reception/page.tsx` fetching grouped queue items, passing to Kanban.
   - **Files**:  
     - `app/reception/page.tsx`
@@ -1890,8 +1829,6 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 ### Summary
 
 The plan proceeds from foundational setup through back‑end schema & actions, then outward to UI features for each user role, real‑time updates, notifications, analytics, testing, and deployment documentation. Each step is atomic (≤ 20 files), ordered to satisfy dependencies, and includes clear instructions for any manual tasks (migration, RLS, environment variables, package installs). This sequence enables a code‑generation system to implement QCare incrementally, validating each layer before proceeding to the next.
-
-</implementation_plan>
 
 <existing_code>
 
@@ -2456,6 +2393,32 @@ Exports the types for the app.
 export * from "./server-action-types"
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/lib/stripe.ts
+/*
+Contains the Stripe configuration for the app.
+*/
+
+import Stripe from "stripe"
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-01-27.acacia",
+  appInfo: { name: "Receipt AI", version: "0.1.0" }
+})
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/utils.ts
+/*
+Contains the utility functions for the app.
+*/
+
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/actions/stripe-actions.ts
 // /*
 // Contains server actions related to Stripe.
@@ -2571,32 +2534,6 @@ File: /Users/dev/Desktop/project/qcare-mvp/actions/stripe-actions.ts
 //       : new Error("Failed to update subscription status")
 //   }
 // }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/stripe.ts
-/*
-Contains the Stripe configuration for the app.
-*/
-
-import Stripe from "stripe"
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-01-27.acacia",
-  appInfo: { name: "Receipt AI", version: "0.1.0" }
-})
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/utils.ts
-/*
-Contains the utility functions for the app.
-*/
-
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/app/layout.tsx
@@ -2812,6 +2749,240 @@ const client = postgres(process.env.DATABASE_URL!, {
 export const db = drizzle(client, { schema })
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
+/*
+Hook to check if the user is on a mobile device.
+*/
+
+import * as React from "react"
+
+const MOBILE_BREAKPOINT = 768
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
+/*
+Hook for copying text to the clipboard.
+*/
+
+"use client"
+
+import { useState } from "react"
+
+export interface useCopyToClipboardProps {
+  timeout?: number
+}
+
+export function useCopyToClipboard({
+  timeout = 2000
+}: useCopyToClipboardProps) {
+  const [isCopied, setIsCopied] = useState<Boolean>(false)
+
+  const copyToClipboard = (value: string) => {
+    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
+      return
+    }
+
+    if (!value) {
+      return
+    }
+
+    navigator.clipboard.writeText(value).then(() => {
+      setIsCopied(true)
+
+      setTimeout(() => {
+        setIsCopied(false)
+      }, timeout)
+    })
+  }
+
+  return { isCopied, copyToClipboard }
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
+/*
+Hook to display toast notifications.
+*/
+
+"use client"
+
+// Inspired by react-hot-toast library
+import * as React from "react"
+
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST"
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
+  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
+  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
+  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        )
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach(toast => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
+        )
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return { ...state, toasts: [] }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter(t => t.id !== action.toastId)
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach(listener => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: open => {
+        if (!open) dismiss()
+      }
+    }
+  })
+
+  return { id: id, dismiss, update }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
+  }
+}
+
+export { toast, useToast }
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/actions/db/profiles-actions.ts
 /*
 Contains server actions related to profiles in the DB.
@@ -2938,6 +3109,67 @@ export async function deleteProfileAction(
     console.error("Error deleting profile:", error)
     return { isSuccess: false, message: "Failed to delete profile" }
   }
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/layout.tsx
+/*
+This server layout provides a shared header and basic structure for (marketing) routes.
+*/
+
+"use server"
+
+import { Footer } from "@/components/landing/footer"
+import Header from "@/components/landing/header"
+
+export default async function MarketingLayout({
+  children
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <div className="flex-1">{children}</div>
+      <Footer />
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/page.tsx
+/*
+This server page is the marketing homepage.
+*/
+
+"use server"
+
+import { HeroSection } from "@/components/landing/hero"
+
+export default async function HomePage() {
+  return (
+    <div className="pb-20">
+      <HeroSection />
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
+/*
+This server layout provides a centered layout for (auth) pages.
+*/
+
+"use server"
+
+interface AuthLayoutProps {
+  children: React.ReactNode
+}
+
+export default async function AuthLayout({ children }: AuthLayoutProps) {
+  return (
+    <div className="flex h-screen items-center justify-center">{children}</div>
+  )
 }
 
 
@@ -3530,258 +3762,6 @@ export default function HeroVideoDialog({
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
-/*
-Hook to check if the user is on a mobile device.
-*/
-
-import * as React from "react"
-
-const MOBILE_BREAKPOINT = 768
-
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return !!isMobile
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
-/*
-Hook for copying text to the clipboard.
-*/
-
-"use client"
-
-import { useState } from "react"
-
-export interface useCopyToClipboardProps {
-  timeout?: number
-}
-
-export function useCopyToClipboard({
-  timeout = 2000
-}: useCopyToClipboardProps) {
-  const [isCopied, setIsCopied] = useState<Boolean>(false)
-
-  const copyToClipboard = (value: string) => {
-    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
-      return
-    }
-
-    if (!value) {
-      return
-    }
-
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true)
-
-      setTimeout(() => {
-        setIsCopied(false)
-      }, timeout)
-    })
-  }
-
-  return { isCopied, copyToClipboard }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
-/*
-Hook to display toast notifications.
-*/
-
-"use client"
-
-// Inspired by react-hot-toast library
-import * as React from "react"
-
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
-type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-}
-
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST"
-} as const
-
-let count = 0
-
-function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
-}
-
-type ActionType = typeof actionTypes
-
-type Action =
-  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
-  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
-  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
-  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
-
-interface State {
-  toasts: ToasterToast[]
-}
-
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
-  }, TOAST_REMOVE_DELAY)
-
-  toastTimeouts.set(toastId, timeout)
-}
-
-export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
-      }
-
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        )
-      }
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach(toast => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
-        )
-      }
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return { ...state, toasts: [] }
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter(t => t.id !== action.toastId)
-      }
-  }
-}
-
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach(listener => {
-    listener(memoryState)
-  })
-}
-
-type Toast = Omit<ToasterToast, "id">
-
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: open => {
-        if (!open) dismiss()
-      }
-    }
-  })
-
-  return { id: id, dismiss, update }
-}
-
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
-
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [state])
-
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
-  }
-}
-
-export { toast, useToast }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
-/*
-This server layout provides a centered layout for (auth) pages.
-*/
-
-"use server"
-
-interface AuthLayoutProps {
-  children: React.ReactNode
-}
-
-export default async function AuthLayout({ children }: AuthLayoutProps) {
-  return (
-    <div className="flex h-screen items-center justify-center">{children}</div>
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
 /*
 This server component provides a tailwind indicator for the app in dev mode.
@@ -3870,44 +3850,349 @@ export const Providers = ({ children, ...props }: ThemeProviderProps) => {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/layout.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
 /*
-This server layout provides a shared header and basic structure for (marketing) routes.
+This server page displays the main features and capabilities of the product.
 */
 
 "use server"
 
-import { Footer } from "@/components/landing/footer"
-import Header from "@/components/landing/header"
+import { Card, CardContent } from "@/components/ui/card"
+import { BarChart, Clock, Settings, Shield, Users, Zap } from "lucide-react"
 
-export default async function MarketingLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
+interface FeatureProps {
+  title: string
+  description: string
+  icon: React.ReactNode
+}
+
+function Feature({ title, description, icon }: FeatureProps) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <div className="flex-1">{children}</div>
-      <Footer />
+    <Card>
+      <CardContent className="flex items-start gap-4 pt-6">
+        <div className="bg-primary text-primary-foreground rounded-lg p-2">
+          {icon}
+        </div>
+        <div>
+          <h3 className="mb-2 font-semibold">{title}</h3>
+          <p className="text-muted-foreground text-sm">{description}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default async function FeaturesPage() {
+  const features: FeatureProps[] = [
+    {
+      title: "Lightning Fast",
+      description:
+        "Optimized performance for quick load times and smooth interactions.",
+      icon: <Zap className="size-5" />
+    },
+    {
+      title: "Enterprise Security",
+      description:
+        "Bank-grade encryption and security measures to protect your data.",
+      icon: <Shield className="size-5" />
+    },
+    {
+      title: "Customizable",
+      description:
+        "Flexible settings and configurations to match your workflow.",
+      icon: <Settings className="size-5" />
+    },
+    {
+      title: "Team Collaboration",
+      description:
+        "Built-in tools for seamless team coordination and communication.",
+      icon: <Users className="size-5" />
+    },
+    {
+      title: "Real-time Updates",
+      description: "Stay synchronized with instant updates and notifications.",
+      icon: <Clock className="size-5" />
+    },
+    {
+      title: "Advanced Analytics",
+      description:
+        "Comprehensive insights and reporting to track your progress.",
+      icon: <BarChart className="size-5" />
+    }
+  ]
+
+  return (
+    <div className="container mx-auto py-12">
+      <h1 className="mb-8 text-center text-4xl font-bold">Features</h1>
+      <p className="text-muted-foreground mx-auto mb-12 max-w-2xl text-center">
+        Discover the powerful features that make our platform the perfect
+        solution for your needs.
+      </p>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {features.map((feature, index) => (
+          <Feature key={index} {...feature} />
+        ))}
+      </div>
     </div>
   )
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/page.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/about/page.tsx
 /*
-This server page is the marketing homepage.
+This server page displays information about the company, mission, and team.
 */
 
 "use server"
 
-import { HeroSection } from "@/components/landing/hero"
+import { Card, CardContent } from "@/components/ui/card"
 
-export default async function HomePage() {
+export default async function AboutPage() {
   return (
-    <div className="pb-20">
-      <HeroSection />
+    <div className="container mx-auto py-12">
+      <h1 className="mb-8 text-center text-4xl font-bold">About Us</h1>
+
+      <div className="space-y-8">
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Our Story</h2>
+            <p className="text-muted-foreground">
+              We are passionate about building tools that help people work
+              smarter and achieve more. Our platform combines cutting-edge
+              technology with intuitive design to create a seamless experience
+              for our users.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
+            <p className="text-muted-foreground">
+              Our mission is to empower individuals and organizations with
+              innovative solutions that drive productivity and success. We
+              believe in creating technology that adapts to how people work, not
+              the other way around.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="mb-4 text-2xl font-semibold">Core Values</h2>
+            <ul className="text-muted-foreground list-inside list-disc space-y-2">
+              <li>Innovation in everything we do</li>
+              <li>Customer success is our success</li>
+              <li>Transparency and trust</li>
+              <li>Continuous improvement</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/pricing/page.tsx
+/*
+This server page displays pricing options for the product, integrating Stripe payment links.
+*/
+
+"use server"
+
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
+import { cn } from "@/lib/utils"
+import { auth } from "@clerk/nextjs/server"
+import { Check } from "lucide-react"
+
+export default async function PricingPage() {
+  const { userId } = await auth()
+
+  const features = [
+    "All core features",
+    "Priority support",
+    "Advanced analytics",
+    "Custom integrations",
+    "API access",
+    "Team collaboration"
+  ]
+
+  return (
+    <div className="container mx-auto max-w-5xl px-4 py-12">
+      <div className="mx-auto mb-12 max-w-2xl text-center">
+        <h1 className="mb-4 text-4xl font-bold">Simple, Transparent Pricing</h1>
+        <p className="text-muted-foreground">
+          Choose the plan that best fits your needs. All plans include a 14-day
+          free trial.
+        </p>
+      </div>
+
+      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2">
+        <PricingCard
+          title="Monthly Plan"
+          price="$10"
+          description="Perfect for individuals and small teams"
+          buttonText="Subscribe Monthly"
+          buttonLink={
+            process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK_MONTHLY || "#"
+          }
+          features={features}
+          userId={userId}
+          popular={false}
+        />
+        <PricingCard
+          title="Yearly Plan"
+          price="$100"
+          description="Save 17% with annual billing"
+          buttonText="Subscribe Yearly"
+          buttonLink={process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK_YEARLY || "#"}
+          features={features}
+          userId={userId}
+          popular={true}
+        />
+      </div>
+
+      <p className="text-muted-foreground mt-8 text-center text-sm">
+        All prices are in USD. Need a custom plan?{" "}
+        <a href="/contact" className="font-medium underline underline-offset-4">
+          Contact us
+        </a>
+      </p>
+    </div>
+  )
+}
+
+interface PricingCardProps {
+  title: string
+  price: string
+  description: string
+  buttonText: string
+  buttonLink: string
+  features: string[]
+  userId: string | null
+  popular: boolean
+}
+
+function PricingCard({
+  title,
+  price,
+  description,
+  buttonText,
+  buttonLink,
+  features,
+  userId,
+  popular
+}: PricingCardProps) {
+  const finalButtonLink = userId
+    ? `${buttonLink}?client_reference_id=${userId}`
+    : buttonLink
+
+  return (
+    <Card
+      className={cn(
+        "relative flex h-full flex-col",
+        popular && "border-primary shadow-lg"
+      )}
+    >
+      {popular && (
+        <div className="bg-primary text-primary-foreground absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-sm font-medium">
+          Most Popular
+        </div>
+      )}
+
+      <CardHeader>
+        <CardTitle className="text-2xl">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="grow">
+        <div className="mb-6 flex items-baseline justify-center gap-x-2">
+          <span className="text-5xl font-bold">{price}</span>
+          <span className="text-muted-foreground">/month</span>
+        </div>
+
+        <ul className="space-y-3">
+          {features.map((feature, index) => (
+            <li key={index} className="flex items-center gap-x-2">
+              <Check className="text-primary size-4" />
+              <span className="text-muted-foreground text-sm">{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+
+      <CardFooter>
+        <Button
+          className={cn(
+            "w-full",
+            popular && "bg-primary text-primary-foreground hover:bg-primary/90"
+          )}
+          asChild
+        >
+          <a
+            href={finalButtonLink}
+            className={cn(
+              "inline-flex items-center justify-center",
+              finalButtonLink === "#" && "pointer-events-none opacity-50"
+            )}
+          >
+            {buttonText}
+          </a>
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/page.tsx
+/*
+This server page displays a contact form for users to get in touch.
+*/
+
+"use server"
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
+import ContactForm from "./_components/contact-form"
+
+export default async function ContactPage() {
+  return (
+    <div className="container mx-auto max-w-5xl px-4 py-12">
+      <div className="mx-auto mb-12 max-w-2xl text-center">
+        <h1 className="mb-4 text-4xl font-bold">Contact Us</h1>
+        <p className="text-muted-foreground">
+          Have a question or need help? Get in touch with our team.
+        </p>
+      </div>
+
+      <Card className="mx-auto max-w-xl">
+        <CardHeader>
+          <CardTitle>Send us a message</CardTitle>
+          <CardDescription>
+            Fill out the form below and we'll get back to you as soon as
+            possible.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ContactForm />
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -4224,354 +4509,6 @@ export type InsertClinic = typeof clinicsTable.$inferInsert
 export type SelectClinic = typeof clinicsTable.$inferSelect
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
-/*
-This server page displays the main features and capabilities of the product.
-*/
-
-"use server"
-
-import { Card, CardContent } from "@/components/ui/card"
-import { BarChart, Clock, Settings, Shield, Users, Zap } from "lucide-react"
-
-interface FeatureProps {
-  title: string
-  description: string
-  icon: React.ReactNode
-}
-
-function Feature({ title, description, icon }: FeatureProps) {
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-4 pt-6">
-        <div className="bg-primary text-primary-foreground rounded-lg p-2">
-          {icon}
-        </div>
-        <div>
-          <h3 className="mb-2 font-semibold">{title}</h3>
-          <p className="text-muted-foreground text-sm">{description}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-export default async function FeaturesPage() {
-  const features: FeatureProps[] = [
-    {
-      title: "Lightning Fast",
-      description:
-        "Optimized performance for quick load times and smooth interactions.",
-      icon: <Zap className="size-5" />
-    },
-    {
-      title: "Enterprise Security",
-      description:
-        "Bank-grade encryption and security measures to protect your data.",
-      icon: <Shield className="size-5" />
-    },
-    {
-      title: "Customizable",
-      description:
-        "Flexible settings and configurations to match your workflow.",
-      icon: <Settings className="size-5" />
-    },
-    {
-      title: "Team Collaboration",
-      description:
-        "Built-in tools for seamless team coordination and communication.",
-      icon: <Users className="size-5" />
-    },
-    {
-      title: "Real-time Updates",
-      description: "Stay synchronized with instant updates and notifications.",
-      icon: <Clock className="size-5" />
-    },
-    {
-      title: "Advanced Analytics",
-      description:
-        "Comprehensive insights and reporting to track your progress.",
-      icon: <BarChart className="size-5" />
-    }
-  ]
-
-  return (
-    <div className="container mx-auto py-12">
-      <h1 className="mb-8 text-center text-4xl font-bold">Features</h1>
-      <p className="text-muted-foreground mx-auto mb-12 max-w-2xl text-center">
-        Discover the powerful features that make our platform the perfect
-        solution for your needs.
-      </p>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {features.map((feature, index) => (
-          <Feature key={index} {...feature} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/about/page.tsx
-/*
-This server page displays information about the company, mission, and team.
-*/
-
-"use server"
-
-import { Card, CardContent } from "@/components/ui/card"
-
-export default async function AboutPage() {
-  return (
-    <div className="container mx-auto py-12">
-      <h1 className="mb-8 text-center text-4xl font-bold">About Us</h1>
-
-      <div className="space-y-8">
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Our Story</h2>
-            <p className="text-muted-foreground">
-              We are passionate about building tools that help people work
-              smarter and achieve more. Our platform combines cutting-edge
-              technology with intuitive design to create a seamless experience
-              for our users.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Our Mission</h2>
-            <p className="text-muted-foreground">
-              Our mission is to empower individuals and organizations with
-              innovative solutions that drive productivity and success. We
-              believe in creating technology that adapts to how people work, not
-              the other way around.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-2xl font-semibold">Core Values</h2>
-            <ul className="text-muted-foreground list-inside list-disc space-y-2">
-              <li>Innovation in everything we do</li>
-              <li>Customer success is our success</li>
-              <li>Transparency and trust</li>
-              <li>Continuous improvement</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/page.tsx
-/*
-This server page displays a contact form for users to get in touch.
-*/
-
-"use server"
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import ContactForm from "./_components/contact-form"
-
-export default async function ContactPage() {
-  return (
-    <div className="container mx-auto max-w-5xl px-4 py-12">
-      <div className="mx-auto mb-12 max-w-2xl text-center">
-        <h1 className="mb-4 text-4xl font-bold">Contact Us</h1>
-        <p className="text-muted-foreground">
-          Have a question or need help? Get in touch with our team.
-        </p>
-      </div>
-
-      <Card className="mx-auto max-w-xl">
-        <CardHeader>
-          <CardTitle>Send us a message</CardTitle>
-          <CardDescription>
-            Fill out the form below and we'll get back to you as soon as
-            possible.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ContactForm />
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/pricing/page.tsx
-/*
-This server page displays pricing options for the product, integrating Stripe payment links.
-*/
-
-"use server"
-
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import { cn } from "@/lib/utils"
-import { auth } from "@clerk/nextjs/server"
-import { Check } from "lucide-react"
-
-export default async function PricingPage() {
-  const { userId } = await auth()
-
-  const features = [
-    "All core features",
-    "Priority support",
-    "Advanced analytics",
-    "Custom integrations",
-    "API access",
-    "Team collaboration"
-  ]
-
-  return (
-    <div className="container mx-auto max-w-5xl px-4 py-12">
-      <div className="mx-auto mb-12 max-w-2xl text-center">
-        <h1 className="mb-4 text-4xl font-bold">Simple, Transparent Pricing</h1>
-        <p className="text-muted-foreground">
-          Choose the plan that best fits your needs. All plans include a 14-day
-          free trial.
-        </p>
-      </div>
-
-      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2">
-        <PricingCard
-          title="Monthly Plan"
-          price="$10"
-          description="Perfect for individuals and small teams"
-          buttonText="Subscribe Monthly"
-          buttonLink={
-            process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK_MONTHLY || "#"
-          }
-          features={features}
-          userId={userId}
-          popular={false}
-        />
-        <PricingCard
-          title="Yearly Plan"
-          price="$100"
-          description="Save 17% with annual billing"
-          buttonText="Subscribe Yearly"
-          buttonLink={process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK_YEARLY || "#"}
-          features={features}
-          userId={userId}
-          popular={true}
-        />
-      </div>
-
-      <p className="text-muted-foreground mt-8 text-center text-sm">
-        All prices are in USD. Need a custom plan?{" "}
-        <a href="/contact" className="font-medium underline underline-offset-4">
-          Contact us
-        </a>
-      </p>
-    </div>
-  )
-}
-
-interface PricingCardProps {
-  title: string
-  price: string
-  description: string
-  buttonText: string
-  buttonLink: string
-  features: string[]
-  userId: string | null
-  popular: boolean
-}
-
-function PricingCard({
-  title,
-  price,
-  description,
-  buttonText,
-  buttonLink,
-  features,
-  userId,
-  popular
-}: PricingCardProps) {
-  const finalButtonLink = userId
-    ? `${buttonLink}?client_reference_id=${userId}`
-    : buttonLink
-
-  return (
-    <Card
-      className={cn(
-        "relative flex h-full flex-col",
-        popular && "border-primary shadow-lg"
-      )}
-    >
-      {popular && (
-        <div className="bg-primary text-primary-foreground absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-sm font-medium">
-          Most Popular
-        </div>
-      )}
-
-      <CardHeader>
-        <CardTitle className="text-2xl">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-
-      <CardContent className="grow">
-        <div className="mb-6 flex items-baseline justify-center gap-x-2">
-          <span className="text-5xl font-bold">{price}</span>
-          <span className="text-muted-foreground">/month</span>
-        </div>
-
-        <ul className="space-y-3">
-          {features.map((feature, index) => (
-            <li key={index} className="flex items-center gap-x-2">
-              <Check className="text-primary size-4" />
-              <span className="text-muted-foreground text-sm">{feature}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-
-      <CardFooter>
-        <Button
-          className={cn(
-            "w-full",
-            popular && "bg-primary text-primary-foreground hover:bg-primary/90"
-          )}
-          asChild
-        >
-          <a
-            href={finalButtonLink}
-            className={cn(
-              "inline-flex items-center justify-center",
-              finalButtonLink === "#" && "pointer-events-none opacity-50"
-            )}
-          >
-            {buttonText}
-          </a>
-        </Button>
-      </CardFooter>
-    </Card>
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/api/stripe/webhooks/route.ts
 /*
 This API route handles Stripe webhook events to manage subscription status changes and updates user profiles accordingly.
@@ -4669,52 +4606,6 @@ async function handleCheckoutSession(event: Stripe.Event) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
-/*
-This client page provides the signup form from Clerk.
-*/
-
-"use client"
-
-import { SignUp } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function SignUpPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignUp
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
-/*
-This client page provides the login form from Clerk.
-*/
-
-"use client"
-
-import { SignIn } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function LoginPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignIn
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/_components/contact-form.tsx
 "use client"
 
@@ -4808,7 +4699,54 @@ export default function ContactForm() {
   )
 }
 
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
+/*
+This client page provides the login form from Clerk.
+*/
+
+"use client"
+
+import { SignIn } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function LoginPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignIn
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
+/*
+This client page provides the signup form from Clerk.
+*/
+
+"use client"
+
+import { SignUp } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function SignUpPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignUp
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
 </file_contents>
+
 
 </existing_code>
 

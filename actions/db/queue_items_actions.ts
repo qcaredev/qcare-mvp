@@ -23,9 +23,10 @@ import {
   SelectQueueItem
 } from "@/db/schema"
 import { ActionState } from "@/types"
-import { and, desc, eq } from "drizzle-orm"
+import { and, asc, desc, eq, gte } from "drizzle-orm"
+import { startOfDay } from "date-fns"
 import { revalidatePath } from "next/cache"
-import { createConsultHistoryAction } from "./consult-history-actions"
+import { createConsultHistoryAction } from "./consult_history_actions"
 
 /**
  * The input type for creating a new queue item, omitting fields that are
@@ -54,35 +55,13 @@ interface ReorderQueueItem {
  * @description Inserts a new patient record into the `queue_items` table.
  *
  * @param {CreateQueueItemInput} data - The patient details to be added.
- * - `clinicId`: The UUID of the clinic this patient belongs to.
- * - `patientName`: The name of the patient.
- * - `phone`: (Optional) The patient's phone number.
- * - `reason`: (Optional) The reason for the visit.
- * - `doctorId`: (Optional) The identifier for the assigned doctor.
- *
  * @returns {Promise<ActionState<SelectQueueItem>>} An `ActionState` object.
- * - On success: `{ isSuccess: true, message: "...", data: newQueueItem }`
- * - On failure: `{ isSuccess: false, message: "..." }`
- *
- * @logic
- * 1. It runs inside a database transaction to ensure atomicity.
- * 2. It calculates the new patient's position by finding the maximum
- * current `position` for the clinic's `WAITLIST` and adding 1.
- * If the queue is empty, the position starts at 0.
- * 3. It inserts the new record with a default `status` of `WAITLIST` and
- * the calculated `position`.
- * 4. After a successful insert, it triggers a revalidation of the reception
- * page to reflect the new data.
  */
 export async function createQueueItemAction(
   data: CreateQueueItemInput
 ): Promise<ActionState<SelectQueueItem>> {
   try {
-    // A transaction ensures that finding the last position and inserting the
-    // new item are performed as a single, atomic operation. This prevents
-    // race conditions if multiple users add patients simultaneously.
     const newQueueItem = await db.transaction(async tx => {
-      // Find the item with the highest position in the waitlist for this clinic.
       const [lastQueueItem] = await tx
         .select({ position: queueItemsTable.position })
         .from(queueItemsTable)
@@ -95,11 +74,8 @@ export async function createQueueItemAction(
         .orderBy(desc(queueItemsTable.position))
         .limit(1)
 
-      // The new position is the last position + 1, or 0 if the queue is empty.
       const newPosition = lastQueueItem ? lastQueueItem.position + 1 : 0
 
-      // Insert the new patient into the queue with the calculated position
-      // and default status.
       const [insertedItem] = await tx
         .insert(queueItemsTable)
         .values({
@@ -112,8 +88,6 @@ export async function createQueueItemAction(
       return insertedItem
     })
 
-    // Revalidate the path to ensure the UI updates with the new item.
-    // This is important for Server Components that fetch this data.
     revalidatePath("/reception")
 
     return {
@@ -131,29 +105,56 @@ export async function createQueueItemAction(
 }
 
 // =================================================================================
+// R E A D
+// =================================================================================
+
+/**
+ * @function getQueueItemsByClinicAction
+ * @description Retrieves all queue items for a given clinic for the current day.
+ *
+ * @param {string} clinicId - The UUID of the clinic.
+ *
+ * @returns {Promise<ActionState<SelectQueueItem[]>>} An `ActionState` object
+ * containing an array of queue items.
+ */
+export async function getQueueItemsByClinicAction(
+  clinicId: string
+): Promise<ActionState<SelectQueueItem[]>> {
+  try {
+    const todayStart = startOfDay(new Date())
+
+    const items = await db.query.queueItems.findMany({
+      where: and(
+        eq(queueItemsTable.clinicId, clinicId),
+        gte(queueItemsTable.createdAt, todayStart)
+      ),
+      orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)]
+    })
+
+    return {
+      isSuccess: true,
+      message: "Queue items retrieved successfully.",
+      data: items
+    }
+  } catch (error) {
+    console.error("Error retrieving queue items:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return { isSuccess: false, message: "Failed to retrieve queue items." }
+  }
+}
+
+// =================================================================================
 // U P D A T E
 // =================================================================================
 
 /**
  * @function reorderQueueAction
- * @description Updates the `position` for multiple items in the waitlist. This
- * is used for drag-and-drop functionality on the reception Kanban board.
+ * @description Updates the `position` for multiple items in the waitlist.
  *
- * @param {ReorderQueueItem[]} items - An array of objects, each containing an
- * `id` and a new `position`.
- *
+ * @param {ReorderQueueItem[]} items - An array of items with their new positions.
  * @returns {Promise<ActionState<void>>} An `ActionState` object.
- * - On success: `{ isSuccess: true, message: "...", data: undefined }`
- * - On failure: `{ isSuccess: false, message: "..." }`
- *
- * @logic
- * 1. It runs inside a database transaction (`db.transaction`) to ensure that all
- * updates succeed or none do. This prevents the queue from becoming corrupted.
- * 2. It iterates through the input array of items and creates an `update` promise
- * for each one.
- * 3. `Promise.all` executes all update promises concurrently within the transaction.
- * 4. If the transaction commits successfully, it revalidates the `/reception`
- * path to trigger a UI update.
  */
 export async function reorderQueueAction(
   items: ReorderQueueItem[]
@@ -187,26 +188,11 @@ export async function reorderQueueAction(
 
 /**
  * @function updateQueueStatusAction
- * @description Moves a queue item to a new status (e.g., WAITLIST -> SERVING).
- * If the new status is 'COMPLETE', it logs the wait and consult durations
- * to the `consult_history` table.
+ * @description Moves a queue item to a new status.
  *
  * @param {string} queueItemId - The ID of the item to update.
  * @param {SelectQueueItem["status"]} newStatus - The target status.
- *
- * @returns {Promise<ActionState<SelectQueueItem>>} An `ActionState` object with the updated item.
- *
- * @logic
- * 1.  Runs within a database transaction for atomicity.
- * 2.  Fetches the item to ensure it exists and to get its timestamps.
- * 3.  **If `newStatus` is 'COMPLETE'**:
- * - It calculates `waitDurationSeconds` and `consultDurationSeconds`.
- * - `waitDuration` is the time from `createdAt` to `updatedAt` (when it was moved to `SERVING`).
- * - `consultDuration` is the time from `updatedAt` to `now()`.
- * - It calls `createConsultHistoryAction` to log these metrics, passing the transaction client `tx`.
- * - If logging fails, it throws an error to abort the transaction.
- * 4.  Updates the item's status and potentially its position (sets to -1 for terminal states).
- * 5.  Revalidates relevant paths (`/reception`, `/doctor`) to update UI.
+ * @returns {Promise<ActionState<SelectQueueItem>>} An `ActionState` object.
  */
 export async function updateQueueStatusAction(
   queueItemId: string,
@@ -214,7 +200,6 @@ export async function updateQueueStatusAction(
 ): Promise<ActionState<SelectQueueItem>> {
   try {
     const updatedItem = await db.transaction(async tx => {
-      // Step 1: Fetch the current item to get its state before the update.
       const [currentItem] = await tx
         .select()
         .from(queueItemsTable)
@@ -224,10 +209,9 @@ export async function updateQueueStatusAction(
         throw new Error("Queue item not found.")
       }
 
-      // Step 2: If moving from SERVING to COMPLETE, log consultation history.
       if (newStatus === "COMPLETE" && currentItem.status === "SERVING") {
         const completionTime = new Date()
-        const consultStartTime = currentItem.updatedAt // This is the time it was moved to SERVING
+        const consultStartTime = currentItem.updatedAt
         const registrationTime = currentItem.createdAt
 
         const waitDurationSeconds = Math.round(
@@ -244,19 +228,15 @@ export async function updateQueueStatusAction(
             waitDurationSeconds,
             consultDurationSeconds
           },
-          tx // Pass the transaction client to ensure atomicity
         )
 
         if (!historyResult.isSuccess) {
-          // If logging fails, the transaction will be rolled back automatically.
           throw new Error(
             `Failed to log consultation history: ${historyResult.message}`
           )
         }
       }
 
-      // Step 3: Update the queue item's status.
-      // For terminal states, set position to -1 to remove from active queue views.
       const newPosition =
         newStatus === "COMPLETE" || newStatus === "CANCELLED"
           ? -1
@@ -275,7 +255,6 @@ export async function updateQueueStatusAction(
       return { isSuccess: false, message: "Could not update queue item." }
     }
 
-    // Step 4: Revalidate paths to reflect the change in the UI.
     revalidatePath("/reception")
     revalidatePath("/doctor")
 
