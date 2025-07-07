@@ -1711,12 +1711,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 
 ## 4 – Reception Dashboard
 - [X] **Step 4.1: Route & Server Page**
-  - **Task**: Create `app/reception/page.tsx` fetching grouped queue items, passing to Kanban.
-  - **Files**:  
-    - `app/reception/page.tsx`
-  - **Step Dependencies**: 2.3
-
-- [ ] **Step 4.2: Kanban Client Component**
+- [X] **Step 4.2: Kanban Client Component**
   - **Task**: Implement `_components/queue-kanban.tsx` using `@dnd-kit`. Includes drag, advance, cancel, notify.
   - **Files**:  
     - `app/reception/_components/queue-kanban.tsx`
@@ -1829,6 +1824,8 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 ### Summary
 
 The plan proceeds from foundational setup through back‑end schema & actions, then outward to UI features for each user role, real‑time updates, notifications, analytics, testing, and deployment documentation. Each step is atomic (≤ 20 files), ordered to satisfy dependencies, and includes clear instructions for any manual tasks (migration, RLS, environment variables, package installs). This sequence enables a code‑generation system to implement QCare incrementally, validating each layer before proceeding to the next.
+
+</implementation_plan>
 
 <existing_code>
 
