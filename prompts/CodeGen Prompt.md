@@ -1693,6 +1693,8 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 
 # Implementation Plan
 
+# Implementation Plan
+
 ## 0 – Bootstrap & Configuration
 - [X] **Step 0.1: Install runtime dependencies**
   - **Task**: Add Supabase client, Twilio, Drag-and-Drop kit, csv-stringify.
@@ -1750,13 +1752,13 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
     - `types/actions-types.ts`: add Queue related types if necessary.
   - **Step Dependencies**: 1.1
 
-- [ ] **Step 2.2: reorderQueueAction**
+- [X] **Step 2.2: reorderQueueAction**
   - **Task**: Update `position` for an array of ids in a transaction.
   - **Files**:  
     - `actions/db/queue-items-actions.ts`: add function.
   - **Step Dependencies**: 2.1
 
-- [ ] **Step 2.3: updateQueueStatusAction**
+- [X] **Step 2.3: updateQueueStatusAction**
   - **Task**: Move item to new status, record wait/consult durations when COMPLETE.
   - **Files**:  
     - `actions/db/queue-items-actions.ts`: extend file.
@@ -4280,95 +4282,6 @@ export default async function AboutPage() {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
-/*
-This server page displays the main features and capabilities of the product.
-*/
-
-"use server"
-
-import { Card, CardContent } from "@/components/ui/card"
-import { BarChart, Clock, Settings, Shield, Users, Zap } from "lucide-react"
-
-interface FeatureProps {
-  title: string
-  description: string
-  icon: React.ReactNode
-}
-
-function Feature({ title, description, icon }: FeatureProps) {
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-4 pt-6">
-        <div className="bg-primary text-primary-foreground rounded-lg p-2">
-          {icon}
-        </div>
-        <div>
-          <h3 className="mb-2 font-semibold">{title}</h3>
-          <p className="text-muted-foreground text-sm">{description}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-export default async function FeaturesPage() {
-  const features: FeatureProps[] = [
-    {
-      title: "Lightning Fast",
-      description:
-        "Optimized performance for quick load times and smooth interactions.",
-      icon: <Zap className="size-5" />
-    },
-    {
-      title: "Enterprise Security",
-      description:
-        "Bank-grade encryption and security measures to protect your data.",
-      icon: <Shield className="size-5" />
-    },
-    {
-      title: "Customizable",
-      description:
-        "Flexible settings and configurations to match your workflow.",
-      icon: <Settings className="size-5" />
-    },
-    {
-      title: "Team Collaboration",
-      description:
-        "Built-in tools for seamless team coordination and communication.",
-      icon: <Users className="size-5" />
-    },
-    {
-      title: "Real-time Updates",
-      description: "Stay synchronized with instant updates and notifications.",
-      icon: <Clock className="size-5" />
-    },
-    {
-      title: "Advanced Analytics",
-      description:
-        "Comprehensive insights and reporting to track your progress.",
-      icon: <BarChart className="size-5" />
-    }
-  ]
-
-  return (
-    <div className="container mx-auto py-12">
-      <h1 className="mb-8 text-center text-4xl font-bold">Features</h1>
-      <p className="text-muted-foreground mx-auto mb-12 max-w-2xl text-center">
-        Discover the powerful features that make our platform the perfect
-        solution for your needs.
-      </p>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {features.map((feature, index) => (
-          <Feature key={index} {...feature} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/pricing/page.tsx
 /*
 This server page displays pricing options for the product, integrating Stripe payment links.
@@ -4529,6 +4442,95 @@ function PricingCard({
 }
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/features/page.tsx
+/*
+This server page displays the main features and capabilities of the product.
+*/
+
+"use server"
+
+import { Card, CardContent } from "@/components/ui/card"
+import { BarChart, Clock, Settings, Shield, Users, Zap } from "lucide-react"
+
+interface FeatureProps {
+  title: string
+  description: string
+  icon: React.ReactNode
+}
+
+function Feature({ title, description, icon }: FeatureProps) {
+  return (
+    <Card>
+      <CardContent className="flex items-start gap-4 pt-6">
+        <div className="bg-primary text-primary-foreground rounded-lg p-2">
+          {icon}
+        </div>
+        <div>
+          <h3 className="mb-2 font-semibold">{title}</h3>
+          <p className="text-muted-foreground text-sm">{description}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default async function FeaturesPage() {
+  const features: FeatureProps[] = [
+    {
+      title: "Lightning Fast",
+      description:
+        "Optimized performance for quick load times and smooth interactions.",
+      icon: <Zap className="size-5" />
+    },
+    {
+      title: "Enterprise Security",
+      description:
+        "Bank-grade encryption and security measures to protect your data.",
+      icon: <Shield className="size-5" />
+    },
+    {
+      title: "Customizable",
+      description:
+        "Flexible settings and configurations to match your workflow.",
+      icon: <Settings className="size-5" />
+    },
+    {
+      title: "Team Collaboration",
+      description:
+        "Built-in tools for seamless team coordination and communication.",
+      icon: <Users className="size-5" />
+    },
+    {
+      title: "Real-time Updates",
+      description: "Stay synchronized with instant updates and notifications.",
+      icon: <Clock className="size-5" />
+    },
+    {
+      title: "Advanced Analytics",
+      description:
+        "Comprehensive insights and reporting to track your progress.",
+      icon: <BarChart className="size-5" />
+    }
+  ]
+
+  return (
+    <div className="container mx-auto py-12">
+      <h1 className="mb-8 text-center text-4xl font-bold">Features</h1>
+      <p className="text-muted-foreground mx-auto mb-12 max-w-2xl text-center">
+        Discover the powerful features that make our platform the perfect
+        solution for your needs.
+      </p>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {features.map((feature, index) => (
+          <Feature key={index} {...feature} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/app/(marketing)/contact/page.tsx
 /*
 This server page displays a contact form for users to get in touch.
@@ -4669,29 +4671,6 @@ async function handleCheckoutSession(event: Stripe.Event) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
-/*
-This client page provides the signup form from Clerk.
-*/
-
-"use client"
-
-import { SignUp } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function SignUpPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignUp
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
 /*
 This client page provides the login form from Clerk.
@@ -4708,6 +4687,29 @@ export default function LoginPage() {
 
   return (
     <SignIn
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
+/*
+This client page provides the signup form from Clerk.
+*/
+
+"use client"
+
+import { SignUp } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function SignUpPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignUp
       forceRedirectUrl="/"
       appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
     />

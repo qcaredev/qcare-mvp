@@ -15,10 +15,17 @@
 "use server"
 
 import { db } from "@/db/db"
-import { InsertQueueItem, queueItemsTable, SelectQueueItem } from "@/db/schema"
+import {
+  consultHistoryTable,
+  InsertQueueItem,
+  queueItemsTable,
+  queueStatusEnum,
+  SelectQueueItem
+} from "@/db/schema"
 import { ActionState } from "@/types"
 import { and, desc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { createConsultHistoryAction } from "./consult-history-actions"
 
 /**
  * The input type for creating a new queue item, omitting fields that are
@@ -175,5 +182,116 @@ export async function reorderQueueAction(
       return { isSuccess: false, message: error.message }
     }
     return { isSuccess: false, message: "Failed to reorder the queue." }
+  }
+}
+
+/**
+ * @function updateQueueStatusAction
+ * @description Moves a queue item to a new status (e.g., WAITLIST -> SERVING).
+ * If the new status is 'COMPLETE', it logs the wait and consult durations
+ * to the `consult_history` table.
+ *
+ * @param {string} queueItemId - The ID of the item to update.
+ * @param {SelectQueueItem["status"]} newStatus - The target status.
+ *
+ * @returns {Promise<ActionState<SelectQueueItem>>} An `ActionState` object with the updated item.
+ *
+ * @logic
+ * 1.  Runs within a database transaction for atomicity.
+ * 2.  Fetches the item to ensure it exists and to get its timestamps.
+ * 3.  **If `newStatus` is 'COMPLETE'**:
+ * - It calculates `waitDurationSeconds` and `consultDurationSeconds`.
+ * - `waitDuration` is the time from `createdAt` to `updatedAt` (when it was moved to `SERVING`).
+ * - `consultDuration` is the time from `updatedAt` to `now()`.
+ * - It calls `createConsultHistoryAction` to log these metrics, passing the transaction client `tx`.
+ * - If logging fails, it throws an error to abort the transaction.
+ * 4.  Updates the item's status and potentially its position (sets to -1 for terminal states).
+ * 5.  Revalidates relevant paths (`/reception`, `/doctor`) to update UI.
+ */
+export async function updateQueueStatusAction(
+  queueItemId: string,
+  newStatus: (typeof queueStatusEnum.enumValues)[number]
+): Promise<ActionState<SelectQueueItem>> {
+  try {
+    const updatedItem = await db.transaction(async tx => {
+      // Step 1: Fetch the current item to get its state before the update.
+      const [currentItem] = await tx
+        .select()
+        .from(queueItemsTable)
+        .where(eq(queueItemsTable.id, queueItemId))
+
+      if (!currentItem) {
+        throw new Error("Queue item not found.")
+      }
+
+      // Step 2: If moving from SERVING to COMPLETE, log consultation history.
+      if (newStatus === "COMPLETE" && currentItem.status === "SERVING") {
+        const completionTime = new Date()
+        const consultStartTime = currentItem.updatedAt // This is the time it was moved to SERVING
+        const registrationTime = currentItem.createdAt
+
+        const waitDurationSeconds = Math.round(
+          (consultStartTime.getTime() - registrationTime.getTime()) / 1000
+        )
+        const consultDurationSeconds = Math.round(
+          (completionTime.getTime() - consultStartTime.getTime()) / 1000
+        )
+
+        const historyResult = await createConsultHistoryAction(
+          {
+            queueItemId: currentItem.id,
+            clinicId: currentItem.clinicId,
+            waitDurationSeconds,
+            consultDurationSeconds
+          },
+          tx // Pass the transaction client to ensure atomicity
+        )
+
+        if (!historyResult.isSuccess) {
+          // If logging fails, the transaction will be rolled back automatically.
+          throw new Error(
+            `Failed to log consultation history: ${historyResult.message}`
+          )
+        }
+      }
+
+      // Step 3: Update the queue item's status.
+      // For terminal states, set position to -1 to remove from active queue views.
+      const newPosition =
+        newStatus === "COMPLETE" || newStatus === "CANCELLED"
+          ? -1
+          : currentItem.position
+
+      const [updated] = await tx
+        .update(queueItemsTable)
+        .set({ status: newStatus, position: newPosition })
+        .where(eq(queueItemsTable.id, queueItemId))
+        .returning()
+
+      return updated
+    })
+
+    if (!updatedItem) {
+      return { isSuccess: false, message: "Could not update queue item." }
+    }
+
+    // Step 4: Revalidate paths to reflect the change in the UI.
+    revalidatePath("/reception")
+    revalidatePath("/doctor")
+
+    return {
+      isSuccess: true,
+      message: `Status updated successfully to ${newStatus}.`,
+      data: updatedItem
+    }
+  } catch (error) {
+    console.error("Error updating queue status:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return {
+      isSuccess: false,
+      message: "An unknown error occurred while updating status."
+    }
   }
 }
