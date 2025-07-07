@@ -1718,7 +1718,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
     - `app/reception/_components/queue-card.tsx`
   - **Step Dependencies**: 4.1
 
-- [ ] **Step 4.3: Queue Mutations Hooks**
+- [X] **Step 4.3: Queue Mutations Hooks**
   - **Task**: Client helpers that call server actions & optimistic update.
   - **Files**:  
     - `app/reception/_components/use-queue-mutations.ts`

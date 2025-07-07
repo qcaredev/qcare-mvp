@@ -3,13 +3,16 @@
  *
  * @description
  * This client component renders a single patient card for the Kanban board.
- * It displays essential patient information and provides action buttons for
- * staff to manage the queue item.
+ * It displays essential patient information and provides action buttons that
+ * trigger callback functions passed down as props.
  *
  * @props
  * - `item`: A `SelectQueueItem` object containing the patient's data.
+ * - `onAdvance`: Callback function to advance the item to the next status.
+ * - `onCancel`: Callback function to mark the item as cancelled.
+ * - `onNotify`: Callback function to send a notification.
  * - `isOverlay`: (Optional) A boolean to indicate if the card is being
- * rendered in a drag overlay. If true, it applies a rotation style.
+ * rendered in a drag overlay.
  *
  * @dependencies
  * - `shadcn/ui`: For Card and Button components.
@@ -29,23 +32,47 @@ import {
 import { SelectQueueItem } from "@/db/schema"
 import { cn } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
-import { Bell, Check, Phone, User, X } from "lucide-react"
+import { Bell, Check, User, X } from "lucide-react"
 
 interface QueueCardProps {
   item: SelectQueueItem
+  onAdvance: (id: string) => void
+  onCancel: (id: string) => void
+  onNotify: (id: string) => void
   isOverlay?: boolean
 }
 
-export default function QueueCard({ item, isOverlay }: QueueCardProps) {
+export default function QueueCard({
+  item,
+  onAdvance,
+  onCancel,
+  onNotify,
+  isOverlay
+}: QueueCardProps) {
+  const handleAdvanceClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent dnd-kit from capturing the click
+    onAdvance(item.id)
+  }
+
+  const handleCancelClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onCancel(item.id)
+  }
+
+  const handleNotifyClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onNotify(item.id)
+  }
+
   return (
     <Card
       className={cn(
-        "mb-4 bg-white shadow-sm",
+        "mb-4 touch-none bg-white shadow-sm transition-shadow hover:shadow-md",
         isOverlay && "ring-primary ring-2"
       )}
     >
       <CardHeader className="p-4 pb-2">
-        <CardTitle className="flex items-center justify-between text-base font-bold">
+        <CardTitle className="flex cursor-grab items-center justify-between text-base font-bold">
           <span>{item.patientName}</span>
           {item.position !== null && item.position >= 0 && (
             <span className="text-muted-foreground text-sm font-normal">
@@ -78,7 +105,7 @@ export default function QueueCard({ item, isOverlay }: QueueCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => console.log("Notify:", item.id)}
+            onClick={handleNotifyClick}
             disabled={!item.phone}
             title={item.phone ? "Send Reminder" : "No phone number available"}
           >
@@ -90,7 +117,7 @@ export default function QueueCard({ item, isOverlay }: QueueCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => console.log("Cancel:", item.id)}
+            onClick={handleCancelClick}
             title="Cancel Appointment"
           >
             <X className="text-destructive size-4" />
@@ -98,7 +125,7 @@ export default function QueueCard({ item, isOverlay }: QueueCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => console.log("Advance:", item.id)}
+            onClick={handleAdvanceClick}
             title="Advance to Next Stage"
           >
             <Check className="size-5 text-green-600" />
