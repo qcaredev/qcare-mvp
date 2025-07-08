@@ -3,8 +3,7 @@
  *
  * @description
  * This client component renders the main UI for the admin dashboard. It takes
- * initial analytics data as props and provides a CSV download feature by calling
- * a dedicated server action.
+ * the fetched analytics and settings data as props and displays it.
  */
 "use client"
 
@@ -17,8 +16,10 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card"
+import { SelectClinicSettings } from "@/db/schema"
 import { Clock, Download, Hourglass, LineChart } from "lucide-react"
 import { toast } from "sonner"
+import { SettingsForm } from "./settings-form"
 
 interface AdminDashboardClientProps {
   clinicId: string
@@ -26,6 +27,7 @@ interface AdminDashboardClientProps {
     avgWaitSeconds: number
     avgConsultSeconds: number
   }
+  clinicSettings: SelectClinicSettings | null
 }
 
 // Helper function to format seconds into a "X min Y sec" string
@@ -38,6 +40,7 @@ const formatSeconds = (seconds: number) => {
 
 export function AdminDashboardClient({
   averageTimes,
+  clinicSettings,
   clinicId
 }: AdminDashboardClientProps) {
   const handleExport = async () => {
@@ -117,7 +120,18 @@ export function AdminDashboardClient({
         </Card>
       </div>
 
-      <div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Clinic Settings</CardTitle>
+            <CardDescription>
+              Manage clinic-wide notification and language settings.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SettingsForm clinicId={clinicId} initialData={clinicSettings} />
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -128,7 +142,7 @@ export function AdminDashboardClient({
               Chart visualization of wait times over the past week (WIP).
             </CardDescription>
           </CardHeader>
-          <CardContent className="bg-muted/50 flex h-[300px] items-center justify-center rounded-b-lg">
+          <CardContent className="bg-muted/50 flex h-full items-center justify-center rounded-b-lg">
             <p className="text-muted-foreground">
               Chart component will be rendered here.
             </p>
