@@ -21,6 +21,7 @@
 "use server"
 
 import { getQueueItemsByClinicAction } from "@/actions/db/queue_items_actions"
+
 import { SelectQueueItem } from "@/db/schema"
 import { Suspense } from "react"
 import QueueKanban, { GroupedQueueItems } from "./_components/queue_kanban"
