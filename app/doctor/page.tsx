@@ -53,5 +53,5 @@ async function DoctorViewDataFetcher() {
     return <div className="p-4 text-red-500">Error: {result.message}</div>
   }
 
-  return <NextUpList items={result.data} />
+  return <NextUpList items={result.data} doctorId={""} />
 }
