@@ -94,7 +94,7 @@ export default function NextUpList({ items, doctorId }: NextUpListProps) {
         ) : (
           <div className="space-y-4">
             {patientList.map(item => (
-              <Card key={item.id} className="bg-white shadow-sm">
+              <Card key={item.id} className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>{item.patientName}</span>
