@@ -190,7 +190,7 @@ export async function getQueueItemsByClinicAction(
     const items = await db.query.queueItems.findMany({
       where: and(
         eq(queueItemsTable.clinicId, clinicId),
-        gte(queueItemsTable.createdAt, todayStart)
+        // gte(queueItemsTable.createdAt, todayStart)
       ),
       orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)]
     })
