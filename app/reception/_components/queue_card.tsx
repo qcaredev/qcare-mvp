@@ -72,7 +72,7 @@ export default function QueueCard({
   return (
     <Card
       className={cn(
-        "mb-4 touch-none bg-white shadow-sm transition-shadow hover:shadow-md",
+        "mb-4 touch-none shadow-sm transition-shadow hover:shadow-md",
         isOverlay && "ring-primary ring-2"
       )}
     >
