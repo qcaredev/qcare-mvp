@@ -30,7 +30,6 @@ interface AdminDashboardClientProps {
   clinicSettings: SelectClinicSettings | null
 }
 
-// Helper function to format seconds into a "X min Y sec" string
 const formatSeconds = (seconds: number) => {
   if (seconds < 60) return `${seconds} sec`
   const minutes = Math.floor(seconds / 60)
@@ -54,9 +53,7 @@ export function AdminDashboardClient({
     }
 
     try {
-      const blob = new Blob([result.data.csv], {
-        type: "text/csv;charset=utf-8;"
-      })
+      const blob = new Blob([result.data.csv], { type: "text/csv;charset=utf-8;" })
       const link = document.createElement("a")
       const url = URL.createObjectURL(blob)
       link.setAttribute("href", url)
@@ -76,11 +73,11 @@ export function AdminDashboardClient({
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-8">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-6">
+      <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         <Button onClick={handleExport}>
-          <Download className="mr-2 size-4" />
+          <Download className="mr-2 h-4 w-4" />
           Download CSV
         </Button>
       </div>
@@ -88,16 +85,14 @@ export function AdminDashboardClient({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Avg. Wait Time
-            </CardTitle>
-            <Hourglass className="text-muted-foreground size-4" />
+            <CardTitle className="text-sm font-medium">Avg. Wait Time</CardTitle>
+            <Hourglass className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatSeconds(averageTimes.avgWaitSeconds)}
             </div>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Average for patients today
             </p>
           </CardContent>
@@ -107,13 +102,13 @@ export function AdminDashboardClient({
             <CardTitle className="text-sm font-medium">
               Avg. Consultation Time
             </CardTitle>
-            <Clock className="text-muted-foreground size-4" />
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatSeconds(averageTimes.avgConsultSeconds)}
             </div>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Average for patients today
             </p>
           </CardContent>
@@ -135,14 +130,14 @@ export function AdminDashboardClient({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <LineChart className="mr-2 size-5" />
+              <LineChart className="mr-2 h-5 w-5" />
               Wait Time Trends
             </CardTitle>
             <CardDescription>
               Chart visualization of wait times over the past week (WIP).
             </CardDescription>
           </CardHeader>
-          <CardContent className="bg-muted/50 flex h-full items-center justify-center rounded-b-lg">
+          <CardContent className="h-full flex items-center justify-center bg-muted/50 rounded-b-lg">
             <p className="text-muted-foreground">
               Chart component will be rendered here.
             </p>

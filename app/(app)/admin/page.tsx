@@ -14,13 +14,13 @@ import { AdminDashboardClient } from "./_components/admin-dashboard-client"
 
 function AdminPageSkeleton() {
   return (
-    <div className="space-y-6 p-8">
-      <div className="bg-muted h-8 w-1/4 animate-pulse rounded-md" />
+    <div className="p-8 space-y-6">
+      <div className="h-8 w-1/4 animate-pulse rounded-md bg-muted" />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="bg-muted h-24 w-full animate-pulse rounded-lg" />
-        <div className="bg-muted h-24 w-full animate-pulse rounded-lg" />
+        <div className="h-24 w-full animate-pulse rounded-lg bg-muted" />
+        <div className="h-24 w-full animate-pulse rounded-lg bg-muted" />
       </div>
-      <div className="bg-muted h-80 w-full animate-pulse rounded-lg" />
+      <div className="h-80 w-full animate-pulse rounded-lg bg-muted" />
     </div>
   )
 }

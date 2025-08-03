@@ -48,7 +48,6 @@ export function SettingsForm({ clinicId, initialData }: SettingsFormProps) {
 
   async function onSubmit(values: z.infer<typeof settingsSchema>) {
     toast.loading("Saving settings...")
-
     const result = await updateClinicSettingsAction({
       clinicId: clinicId,
       ...values
@@ -74,8 +73,7 @@ export function SettingsForm({ clinicId, initialData }: SettingsFormProps) {
                 <Input type="number" {...field} />
               </FormControl>
               <FormDescription>
-                Send a "You're next" reminder when a patient is this many spots
-                away.
+                Send a "You're next" reminder when a patient is this many spots away.
               </FormDescription>
               <FormMessage />
             </FormItem>

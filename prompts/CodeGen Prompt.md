@@ -1739,7 +1739,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
   - **Step Dependencies**: 8.1
 
 ## 9 – Settings Panel
-- [ ] **Step 9.1: Clinic settings CRUD**
+- [X] **Step 9.1: Clinic settings CRUD**
   - **Task**: Server actions + simple form to update alert threshold & language.
   - **Files**:  
     - `actions/db/clinic-settings-actions.ts`
@@ -1747,7 +1747,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
   - **Step Dependencies**: 1.1, 8.2
 
 ## 10 – Auth & Authorization Enhancements
-- [ ] **Step 10.1: Role claims helper**
+- [X] **Step 10.1: Role claims helper**
   - **Task**: Add `lib/use-role.ts` (reads Clerk public metadata for role: staff, doctor, admin).
   - **Files**:  
     - `lib/use-role.ts`
@@ -1815,32 +1815,15 @@ The plan proceeds from foundational setup through back‑end schema & actions, t
 │   │   │   └── [[...signup]]
 │   │   │       └── page.tsx
 │   │   └── layout.tsx
-│   ├── admin
-│   │   ├── _components
-│   │   │   └── admin-dashboard-client.tsx
-│   │   └── page.tsx
 │   ├── api
 │   │   └── stripe
 │   │       └── webhooks
 │   │           └── route.ts
-│   ├── doctor
-│   │   ├── _components
-│   │   │   ├── doctor-page-skeleton.tsx
-│   │   │   ├── mini_profile_dialog.tsx
-│   │   │   └── next-up-list.tsx
-│   │   └── page.tsx
 │   ├── q
 │   │   └── [queueId]
 │   │       ├── _components
 │   │       │   └── patient-queue-view.tsx
 │   │       └── page.tsx
-│   ├── reception
-│   │   ├── _components
-│   │   │   ├── queue_card.tsx
-│   │   │   ├── queue_kanban.tsx
-│   │   │   ├── reception-page-skeleton.tsx
-│   │   │   └── use_queue_mutations.ts
-│   │   └── page.tsx
 │   ├── globals.css
 │   └── layout.tsx
 ├── components
@@ -1848,6 +1831,9 @@ The plan proceeds from foundational setup through back‑end schema & actions, t
 │   │   ├── footer.tsx
 │   │   ├── header.tsx
 │   │   └── hero.tsx
+│   ├── magicui
+│   │   ├── animated-gradient-text.tsx
+│   │   └── hero-video-dialog.tsx
 │   └── utilities
 │       ├── providers.tsx
 │       ├── tailwind-indicator.tsx
@@ -1889,32 +1875,28 @@ The plan proceeds from foundational setup through back‑end schema & actions, t
 
 <file_contents>
 File: /Users/dev/Desktop/project/qcare-mvp/middleware.ts
-/*
-Contains middleware for protecting routes, checking user authentication, and redirecting as needed.
-*/
+import { authMiddleware } from "@clerk/nextjs/server";
 
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
-import { NextResponse } from "next/server"
-
-const isProtectedRoute = createRouteMatcher(["/reception(.*)", "/doctor(.*)", "/admin(.*)"])
-
-export default clerkMiddleware(async (auth, req) => {
-  const { userId, redirectToSignIn } = await auth()
-
-  // If the user isn't signed in and the route is private, redirect to sign-in
-  if (!userId && isProtectedRoute(req)) {
-    return redirectToSignIn({ returnBackUrl: "/login" })
-  }
-
-  // If the user is logged in and the route is protected, let them view.
-  if (userId && isProtectedRoute(req)) {
-    return NextResponse.next()
-  }
-})
+// This is the simplest and most robust way to configure Clerk middleware for the packages we've installed.
+// It protects all routes by default.
+// Public routes are exempted via the publicRoutes array.
+export default authMiddleware({
+  publicRoutes: [
+    "/",
+    "/about",
+    "/contact",
+    "/features",
+    "/pricing",
+    "/q/(.*)", // Public patient tracking page (e.g., /q/some-id)
+    "/api/stripe/webhooks",
+  ],
+});
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"]
-}
+  // The matcher ensures that the middleware runs on all routes except for
+  // static assets and Next.js-specific paths.
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+};
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/license
@@ -2120,14 +2102,15 @@ File: /Users/dev/Desktop/project/qcare-mvp/package.json
     "analyze": "ANALYZE=true npm run build",
     "db:generate": "npx drizzle-kit generate",
     "db:migrate": "npx drizzle-kit migrate",
+    "test": "echo \"No test specified\" && exit 0",
     "prepare": "husky install"
   },
   "dependencies": {
     "@clerk/backend": "^1.24.0",
-    "@clerk/nextjs": "^6.11.2",
+    "@clerk/nextjs": "^5.7.5",
     "@clerk/themes": "^2.2.17",
     "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/sortable": "^8.0.0",
     "@hookform/resolvers": "^4.0.0",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -2162,20 +2145,20 @@ File: /Users/dev/Desktop/project/qcare-mvp/package.json
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
-    "csv-stringify": "^5.6.5",
+    "csv-stringify": "^6.6.0",
     "date-fns": "^3.6.0",
     "drizzle-orm": "^0.39.3",
     "embla-carousel-react": "^8.5.2",
     "framer-motion": "^12.4.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.475.0",
-    "next": "^15.1.7",
+    "next": "^14.2.4",
     "next-themes": "^0.4.4",
     "postcss": "^8.5.2",
     "postgres": "^3.4.5",
-    "react": "^18.2.0",
+    "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
-    "react-dom": "^18.2.0",
+    "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.1",
@@ -2199,11 +2182,12 @@ File: /Users/dev/Desktop/project/qcare-mvp/package.json
     "eslint-config-next": "15.1.7",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-tailwindcss": "^3.18.0",
-    "husky": "^9.1.7",
+    "husky": "^8.0.0",
     "prettier": "^3.5.0",
     "typescript": "^5"
   }
 }
+
 
 File: /Users/dev/Desktop/project/qcare-mvp/prettier.config.cjs
 /*
@@ -2342,7 +2326,7 @@ Contains the ESLint configuration for the app.
     "react/no-unescaped-entities": "off"
   },
   "settings": {
-    "tailwindcss": { "callees": ["cn", "cva"], "config": "tailwind.config.js" }
+    "tailwindcss": { "callees": ["cn", "cva"], "config": "tailwind.config.ts" }
   },
   "overrides": [
     { "files": ["*.ts", "*.tsx"], "parser": "@typescript-eslint/parser" }
@@ -2461,120 +2445,120 @@ export async function sendWhatsAppMessageAction({
 }
 
 File: /Users/dev/Desktop/project/qcare-mvp/actions/stripe-actions.ts
-// /*
-// Contains server actions related to Stripe.
-// */
+/*
+Contains server actions related to Stripe.
+*/
 
-// import {
-//   updateProfileAction,
-//   updateProfileByStripeCustomerIdAction
-// } from "@/actions/db/profiles-actions"
-// import { SelectProfile } from "@/db/schema"
-// import { stripe } from "@/lib/stripe"
-// import Stripe from "stripe"
+import {
+  updateProfileAction,
+  updateProfileByStripeCustomerIdAction
+} from "@/actions/db/profiles-actions"
+import { SelectProfile } from "@/db/schema"
+import { stripe } from "@/lib/stripe"
+import Stripe from "stripe"
 
-// type MembershipStatus = SelectProfile["membership"]
+type MembershipStatus = SelectProfile["membership"]
 
-// const getMembershipStatus = (
-//   status: Stripe.Subscription.Status,
-//   membership: MembershipStatus
-// ): MembershipStatus => {
-//   switch (status) {
-//     case "active":
-//     case "trialing":
-//       return membership
-//     case "canceled":
-//     case "incomplete":
-//     case "incomplete_expired":
-//     case "past_due":
-//     case "paused":
-//     case "unpaid":
-//       return "free"
-//     default:
-//       return "free"
-//   }
-// }
+const getMembershipStatus = (
+  status: Stripe.Subscription.Status,
+  membership: MembershipStatus
+): MembershipStatus => {
+  switch (status) {
+    case "active":
+    case "trialing":
+      return membership
+    case "canceled":
+    case "incomplete":
+    case "incomplete_expired":
+    case "past_due":
+    case "paused":
+    case "unpaid":
+      return "free"
+    default:
+      return "free"
+  }
+}
 
-// const getSubscription = async (subscriptionId: string) => {
-//   return stripe.subscriptions.retrieve(subscriptionId, {
-//     expand: ["default_payment_method"]
-//   })
-// }
+const getSubscription = async (subscriptionId: string) => {
+  return stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["default_payment_method"]
+  })
+}
 
-// export const updateStripeCustomer = async (
-//   userId: string,
-//   subscriptionId: string,
-//   customerId: string
-// ) => {
-//   try {
-//     if (!userId || !subscriptionId || !customerId) {
-//       throw new Error("Missing required parameters for updateStripeCustomer")
-//     }
+export const updateStripeCustomer = async (
+  userId: string,
+  subscriptionId: string,
+  customerId: string
+) => {
+  try {
+    if (!userId || !subscriptionId || !customerId) {
+      throw new Error("Missing required parameters for updateStripeCustomer")
+    }
 
-//     const subscription = await getSubscription(subscriptionId)
+    const subscription = await getSubscription(subscriptionId)
 
-//     const result = await updateProfileAction(userId, {
-//       stripeCustomerId: customerId,
-//       stripeSubscriptionId: subscription.id
-//     })
+    const result = await updateProfileAction(userId, {
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscription.id
+    })
 
-//     if (!result.isSuccess) {
-//       throw new Error("Failed to update customer profile")
-//     }
+    if (!result.isSuccess) {
+      throw new Error("Failed to update customer profile")
+    }
 
-//     return result.data
-//   } catch (error) {
-//     console.error("Error in updateStripeCustomer:", error)
-//     throw error instanceof Error
-//       ? error
-//       : new Error("Failed to update Stripe customer")
-//   }
-// }
+    return result.data
+  } catch (error) {
+    console.error("Error in updateStripeCustomer:", error)
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update Stripe customer")
+  }
+}
 
-// export const manageSubscriptionStatusChange = async (
-//   subscriptionId: string,
-//   customerId: string,
-//   productId: string
-// ): Promise<MembershipStatus> => {
-//   try {
-//     if (!subscriptionId || !customerId || !productId) {
-//       throw new Error(
-//         "Missing required parameters for manageSubscriptionStatusChange"
-//       )
-//     }
+export const manageSubscriptionStatusChange = async (
+  subscriptionId: string,
+  customerId: string,
+  productId: string
+): Promise<MembershipStatus> => {
+  try {
+    if (!subscriptionId || !customerId || !productId) {
+      throw new Error(
+        "Missing required parameters for manageSubscriptionStatusChange"
+      )
+    }
 
-//     const subscription = await getSubscription(subscriptionId)
-//     const product = await stripe.products.retrieve(productId)
-//     const membership = product.metadata.membership as MembershipStatus
+    const subscription = await getSubscription(subscriptionId)
+    const product = await stripe.products.retrieve(productId)
+    const membership = product.metadata.membership as MembershipStatus
 
-//     if (!["free", "pro"].includes(membership)) {
-//       throw new Error(
-//         `Invalid membership type in product metadata: ${membership}`
-//       )
-//     }
+    if (!["free", "pro"].includes(membership)) {
+      throw new Error(
+        `Invalid membership type in product metadata: ${membership}`
+      )
+    }
 
-//     const membershipStatus = getMembershipStatus(
-//       subscription.status,
-//       membership
-//     )
+    const membershipStatus = getMembershipStatus(
+      subscription.status,
+      membership
+    )
 
-//     const updateResult = await updateProfileByStripeCustomerIdAction(
-//       customerId,
-//       { stripeSubscriptionId: subscription.id, membership: membershipStatus }
-//     )
+    const updateResult = await updateProfileByStripeCustomerIdAction(
+      customerId,
+      { stripeSubscriptionId: subscription.id, membership: membershipStatus }
+    )
 
-//     if (!updateResult.isSuccess) {
-//       throw new Error("Failed to update subscription status")
-//     }
+    if (!updateResult.isSuccess) {
+      throw new Error("Failed to update subscription status")
+    }
 
-//     return membershipStatus
-//   } catch (error) {
-//     console.error("Error in manageSubscriptionStatusChange:", error)
-//     throw error instanceof Error
-//       ? error
-//       : new Error("Failed to update subscription status")
-//   }
-// }
+    return membershipStatus
+  } catch (error) {
+    console.error("Error in manageSubscriptionStatusChange:", error)
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update subscription status")
+  }
+}
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/lib/stripe.ts
@@ -2582,13 +2566,12 @@ File: /Users/dev/Desktop/project/qcare-mvp/lib/stripe.ts
 Contains the Stripe configuration for the app.
 */
 
-import Stripe from "stripe"
+import Stripe from "stripe";
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-01-27.acacia",
+  apiVersion: "2025-02-24.acacia",
   appInfo: { name: "Receipt AI", version: "0.1.0" }
 })
-
 
 File: /Users/dev/Desktop/project/qcare-mvp/lib/utils.ts
 /*
@@ -2635,29 +2618,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/app/layout.tsx
-/**
- * @file layout.tsx
- *
- * @description
- * The root server layout for the app. This version is simplified to remove
- * the global auth() call that was causing middleware conflicts.
- */
-// The "use server" directive has been removed from here.
+import { ClerkProvider } from "@clerk/nextjs"
+import { Inter } from "next/font/google"
+import type { Metadata } from "next"
 
 import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/utilities/providers"
 import { TailwindIndicator } from "@/components/utilities/tailwind-indicator"
 import { cn } from "@/lib/utils"
-import { ClerkProvider } from "@clerk/nextjs"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "QCare",
-  description: "A real-time queue management system."
+  description: "A real-time queue management system.",
 }
 
 export default function RootLayout({
@@ -2670,19 +2645,19 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <body
           className={cn(
-            "bg-background mx-auto min-h-screen w-full scroll-smooth antialiased",
+            "min-h-screen bg-background font-sans antialiased",
             inter.className
           )}
         >
           <Providers
             attribute="class"
-            defaultTheme="light"
-            enableSystem={false}
+            defaultTheme="system"
+            enableSystem
             disableTransitionOnChange
           >
             {children}
-            <TailwindIndicator />
             <Toaster />
+            <TailwindIndicator />
           </Providers>
         </body>
       </html>
@@ -2834,6 +2809,819 @@ const client = postgres(process.env.DATABASE_URL!, {
  * Drizzle ORM instance—exported for use in server actions.
  */
 export const db = drizzle(client, { schema })
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/landing/hero.tsx
+/**
+ * @file hero.tsx
+ * @description This client component provides the hero section for the landing page.
+ * It has been updated to remove dependencies on the 'magicui' components.
+ */
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
+import { Rocket } from "lucide-react"
+import Link from "next/link"
+
+export const HeroSection = () => {
+  return (
+    <div className="flex flex-col items-center justify-center px-8 pt-32 text-center">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="flex items-center justify-center"
+      >
+        <Link
+          href="https://github.com/mckaywrigley/o1-pro-template-system"
+          className="bg-muted mb-4 inline-block rounded-full px-4 py-1.5 text-sm"
+        >
+          View the code on GitHub
+        </Link>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+        className="mt-8 flex max-w-2xl flex-col items-center justify-center gap-6"
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+          className="text-balance text-6xl font-bold"
+        >
+          QCare
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
+          className="max-w-xl text-balance text-xl"
+        >
+          A real-time, WhatsApp-driven queue-tracking system.
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8, ease: "easeOut" }}
+        >
+          <Link href="/signup">
+            <Button className="bg-blue-500 text-lg hover:bg-blue-600">
+              <Rocket className="mr-2 size-5" />
+              Get Started →
+            </Button>
+          </Link>
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, delay: 1, ease: "easeOut" }}
+        className="bg-muted mx-auto mt-20 w-full max-w-screen-lg items-center justify-center rounded-lg border shadow-lg"
+      >
+        <img
+          src="/hero.png"
+          alt="Hero"
+          className="w-full rounded-md border shadow-lg"
+        />
+      </motion.div>
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/landing/footer.tsx
+/*
+This server component provides the footer for the app.
+*/
+
+import { Github, Twitter } from "lucide-react"
+import Link from "next/link"
+
+export async function Footer() {
+  return (
+    <footer className="border-t">
+      <div className="container mx-auto max-w-7xl px-4 py-12 md:px-6">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Company</h3>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/about"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                About
+              </Link>
+              <Link
+                href="/blog"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Blog
+              </Link>
+              <Link
+                href="/careers"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Careers
+              </Link>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Product</h3>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/features"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Features
+              </Link>
+              <Link
+                href="/pricing"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Pricing
+              </Link>
+              <Link
+                href="/docs"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Documentation
+              </Link>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Resources</h3>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/support"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Support
+              </Link>
+              <Link
+                href="/terms"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Terms
+              </Link>
+              <Link
+                href="/privacy"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Privacy
+              </Link>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Social</h3>
+            <div className="flex gap-4">
+              <Link
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Github className="text-muted-foreground hover:text-foreground size-6 transition" />
+              </Link>
+              <Link
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Twitter className="text-muted-foreground hover:text-foreground size-6 transition" />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-muted-foreground mt-12 pt-8 text-center">
+          <p>
+            &copy; {new Date().getFullYear()} Your Company. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/landing/header.tsx
+/*
+This client component provides the header for the app.
+*/
+
+"use client"
+
+import { Button } from "@/components/ui/button"
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton
+} from "@clerk/nextjs"
+import { motion } from "framer-motion"
+import { Menu, Receipt, X } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
+
+const navLinks = [
+  { href: "/about", label: "About" },
+  { href: "/features", label: "Features" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/contact", label: "Contact" }
+]
+
+const signedInLinks = [{ href: "/dashboard", label: "Dashboard" }]
+
+export default function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen)
+  }
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0)
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  return (
+    <motion.header
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className={`sticky top-0 z-50 transition-colors ${
+        isScrolled
+          ? "bg-background/80 shadow-sm backdrop-blur-sm"
+          : "bg-background"
+      }`}
+    >
+      <div className="container mx-auto flex max-w-7xl items-center justify-between p-4">
+        <motion.div
+          className="flex items-center space-x-2 hover:cursor-pointer hover:opacity-80"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Receipt className="size-6" />
+          <Link href="/" className="text-xl font-bold">
+            Receipt AI
+          </Link>
+        </motion.div>
+
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 space-x-2 md:flex">
+          {navLinks.map(link => (
+            <motion.div
+              key={link.href}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Link
+                href={link.href}
+                className="text-muted-foreground hover:text-foreground rounded-full px-3 py-1 transition"
+              >
+                {link.label}
+              </Link>
+            </motion.div>
+          ))}
+
+          <SignedIn>
+            {signedInLinks.map(link => (
+              <motion.div
+                key={link.href}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Link
+                  href={link.href}
+                  className="text-muted-foreground hover:text-foreground rounded-full px-3 py-1 transition"
+                >
+                  {link.label}
+                </Link>
+              </motion.div>
+            ))}
+          </SignedIn>
+        </nav>
+
+        <div className="flex items-center space-x-4">
+          <SignedOut>
+            <SignInButton>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button variant="ghost">Sign In</Button>
+              </motion.div>
+            </SignInButton>
+
+            <SignUpButton>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button>Get Started</Button>
+              </motion.div>
+            </SignUpButton>
+          </SignedOut>
+
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+
+          <motion.div
+            className="md:hidden"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMenu}
+              aria-label="Toggle menu"
+            >
+              {isMenuOpen ? (
+                <X className="size-6" />
+              ) : (
+                <Menu className="size-6" />
+              )}
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+
+      {isMenuOpen && (
+        <motion.nav
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="bg-primary-foreground text-primary p-4 md:hidden"
+        >
+          <ul className="space-y-2">
+            <li>
+              <Link
+                href="/"
+                className="block hover:underline"
+                onClick={toggleMenu}
+              >
+                Home
+              </Link>
+            </li>
+            {navLinks.map(link => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="block hover:underline"
+                  onClick={toggleMenu}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+            <SignedIn>
+              {signedInLinks.map(link => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="block hover:underline"
+                    onClick={toggleMenu}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </SignedIn>
+          </ul>
+        </motion.nav>
+      )}
+    </motion.header>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/magicui/animated-gradient-text.tsx
+/*
+This client component provides an animated gradient text.
+*/
+
+import { ReactNode } from "react"
+
+import { cn } from "@/lib/utils"
+
+export default function AnimatedGradientText({
+  children,
+  className
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "group relative mx-auto flex max-w-fit flex-row items-center justify-center rounded-2xl bg-white/40 px-4 py-1.5 text-sm font-medium shadow-[inset_0_-8px_10px_#8fdfff1f] backdrop-blur-sm transition-shadow duration-500 ease-out [--bg-size:300%] hover:shadow-[inset_0_-5px_10px_#8fdfff3f] dark:bg-black/40",
+        className
+      )}
+    >
+      <div
+        className={`animate-gradient absolute inset-0 block size-full bg-gradient-to-r from-[#ffaa40]/50 via-[#9c40ff]/50 to-[#ffaa40]/50 bg-[length:var(--bg-size)_100%] p-[1px] [border-radius:inherit] ![mask-composite:subtract] [mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)]`}
+      />
+
+      {children}
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/magicui/hero-video-dialog.tsx
+/*
+This client component provides a video dialog for the hero section.
+*/
+
+"use client"
+
+import { AnimatePresence, motion } from "framer-motion"
+import { Play, XIcon } from "lucide-react"
+import { useState } from "react"
+
+import { cn } from "@/lib/utils"
+
+type AnimationStyle =
+  | "from-bottom"
+  | "from-center"
+  | "from-top"
+  | "from-left"
+  | "from-right"
+  | "fade"
+  | "top-in-bottom-out"
+  | "left-in-right-out"
+
+interface HeroVideoProps {
+  animationStyle?: AnimationStyle
+  videoSrc: string
+  thumbnailSrc: string
+  thumbnailAlt?: string
+  className?: string
+}
+
+const animationVariants = {
+  "from-bottom": {
+    initial: { y: "100%", opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    exit: { y: "100%", opacity: 0 }
+  },
+  "from-center": {
+    initial: { scale: 0.5, opacity: 0 },
+    animate: { scale: 1, opacity: 1 },
+    exit: { scale: 0.5, opacity: 0 }
+  },
+  "from-top": {
+    initial: { y: "-100%", opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    exit: { y: "-100%", opacity: 0 }
+  },
+  "from-left": {
+    initial: { x: "-100%", opacity: 0 },
+    animate: { x: 0, opacity: 1 },
+    exit: { x: "-100%", opacity: 0 }
+  },
+  "from-right": {
+    initial: { x: "100%", opacity: 0 },
+    animate: { x: 0, opacity: 1 },
+    exit: { x: "100%", opacity: 0 }
+  },
+  fade: {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0 }
+  },
+  "top-in-bottom-out": {
+    initial: { y: "-100%", opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    exit: { y: "100%", opacity: 0 }
+  },
+  "left-in-right-out": {
+    initial: { x: "-100%", opacity: 0 },
+    animate: { x: 0, opacity: 1 },
+    exit: { x: "100%", opacity: 0 }
+  }
+}
+
+export default function HeroVideoDialog({
+  animationStyle = "from-center",
+  videoSrc,
+  thumbnailSrc,
+  thumbnailAlt = "Video thumbnail",
+  className
+}: HeroVideoProps) {
+  const [isVideoOpen, setIsVideoOpen] = useState(false)
+  const selectedAnimation = animationVariants[animationStyle]
+
+  return (
+    <div className={cn("relative", className)}>
+      <div
+        className="group relative cursor-pointer"
+        onClick={() => setIsVideoOpen(true)}
+      >
+        <img
+          src={thumbnailSrc}
+          alt={thumbnailAlt}
+          width={1920}
+          height={1080}
+          className="w-full rounded-md border shadow-lg transition-all duration-200 ease-out group-hover:brightness-[0.8]"
+        />
+        <div className="absolute inset-0 flex scale-[0.9] items-center justify-center rounded-2xl transition-all duration-200 ease-out group-hover:scale-100">
+          <div className="bg-primary/10 flex size-28 items-center justify-center rounded-full backdrop-blur-md">
+            <div
+              className={`from-primary/30 to-primary relative flex size-20 scale-100 items-center justify-center rounded-full bg-gradient-to-b shadow-md transition-all duration-200 ease-out group-hover:scale-[1.2]`}
+            >
+              <Play
+                className="size-8 scale-100 fill-white text-white transition-transform duration-200 ease-out group-hover:scale-105"
+                style={{
+                  filter:
+                    "drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))"
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <AnimatePresence>
+        {isVideoOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => setIsVideoOpen(false)}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md"
+          >
+            <motion.div
+              {...selectedAnimation}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="relative mx-4 aspect-video w-full max-w-4xl md:mx-0"
+            >
+              <motion.button className="absolute -top-16 right-0 rounded-full bg-neutral-900/50 p-2 text-xl text-white ring-1 backdrop-blur-md dark:bg-neutral-100/50 dark:text-black">
+                <XIcon className="size-5" />
+              </motion.button>
+              <div className="relative isolate z-[1] size-full overflow-hidden rounded-2xl border-2 border-white">
+                <iframe
+                  src={videoSrc}
+                  className="size-full rounded-2xl"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                ></iframe>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
+/*
+Hook to check if the user is on a mobile device.
+*/
+
+import * as React from "react"
+
+const MOBILE_BREAKPOINT = 768
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
+/*
+Hook for copying text to the clipboard.
+*/
+
+"use client"
+
+import { useState } from "react"
+
+export interface useCopyToClipboardProps {
+  timeout?: number
+}
+
+export function useCopyToClipboard({
+  timeout = 2000
+}: useCopyToClipboardProps) {
+  const [isCopied, setIsCopied] = useState<Boolean>(false)
+
+  const copyToClipboard = (value: string) => {
+    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
+      return
+    }
+
+    if (!value) {
+      return
+    }
+
+    navigator.clipboard.writeText(value).then(() => {
+      setIsCopied(true)
+
+      setTimeout(() => {
+        setIsCopied(false)
+      }, timeout)
+    })
+  }
+
+  return { isCopied, copyToClipboard }
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
+/*
+Hook to display toast notifications.
+*/
+
+"use client"
+
+// Inspired by react-hot-toast library
+import * as React from "react"
+
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST"
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
+  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
+  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
+  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        )
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach(toast => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
+        )
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return { ...state, toasts: [] }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter(t => t.id !== action.toastId)
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach(listener => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: open => {
+        if (!open) dismiss()
+      }
+    }
+  })
+
+  return { id: id, dismiss, update }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
+  }
+}
+
+export { toast, useToast }
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/actions/db/queue_items_actions.ts
@@ -3029,7 +3817,7 @@ export async function getQueueItemsByClinicAction(
     const items = await db.query.queueItems.findMany({
       where: and(
         eq(queueItemsTable.clinicId, clinicId),
-        gte(queueItemsTable.createdAt, todayStart)
+        // gte(queueItemsTable.createdAt, todayStart)
       ),
       orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)]
     })
@@ -3542,211 +4330,6 @@ export async function deleteProfileAction(
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/admin/page.tsx
-/**
- * @file app/admin/page.tsx
- *
- * @description
- * This file defines the server page for the Admin Dashboard. It fetches all
- * necessary analytics and passes it to a client component for display.
- */
-"use server"
-
-import { getDailyAverageWaitTimesAction } from "@/actions/db/analytics-actions"
-import { Suspense } from "react"
-import { AdminDashboardClient } from "./_components/admin-dashboard-client"
-
-/**
- * A basic skeleton component for the admin page loading state.
- */
-function AdminPageSkeleton() {
-  return (
-    <div className="space-y-6 p-8">
-      <div className="bg-muted h-8 w-1/4 animate-pulse rounded-md" />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="bg-muted h-24 w-full animate-pulse rounded-lg" />
-        <div className="bg-muted h-24 w-full animate-pulse rounded-lg" />
-      </div>
-      <div className="bg-muted h-80 w-full animate-pulse rounded-lg" />
-    </div>
-  )
-}
-
-/**
- * The primary server component for the `/admin` route.
- */
-export default async function AdminPage() {
-  return (
-    <Suspense fallback={<AdminPageSkeleton />}>
-      <AnalyticsDataFetcher />
-    </Suspense>
-  )
-}
-
-/**
- * An async server component that fetches all data required for the admin
- * dashboard and passes it to the client component.
- */
-async function AnalyticsDataFetcher() {
-  // NOTE: This is a placeholder. In a real application, this ID would
-  // be dynamically retrieved from the authenticated user's session or profile.
-  const MOCK_CLINIC_ID = "c7e2b8a0-3b7a-4b1e-8e0a-9e0e3e7f1b2a"
-
-  const avgTimesResult = await getDailyAverageWaitTimesAction(MOCK_CLINIC_ID)
-
-  if (!avgTimesResult.isSuccess) {
-    return (
-      <div className="p-4 text-red-500">Error: {avgTimesResult.message}</div>
-    )
-  }
-
-  return (
-    <AdminDashboardClient
-      clinicId={MOCK_CLINIC_ID}
-      averageTimes={avgTimesResult.data}
-    />
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/reception/page.tsx
-/**
- * @file app/reception/page.tsx
- *
- * @description
- * This file defines the server page for the main reception dashboard. It follows
- * the recommended Next.js pattern of using a Server Component to fetch data and
- * then passing that data to a Client Component for rendering and interactivity.
- *
- * @features
- * - **Server-Side Data Fetching**: Retrieves queue data on the server.
- * - **Suspense for Loading States**: Uses React's `<Suspense>` to show a
- * skeleton UI while data is being fetched, improving the user experience.
- * - **Data Grouping**: Processes the flat list of queue items from the database
- * into a structure grouped by status, ready for the Kanban board component.
- *
- * @notes
- * - A mock `clinicId` is used for now. This will be replaced with dynamic data
- * from the user's session once authentication and multi-tenancy are fully
- * integrated.
- */
-"use server"
-
-import { getQueueItemsByClinicAction } from "@/actions/db/queue_items_actions"
-import { SelectQueueItem } from "@/db/schema"
-import { Suspense } from "react"
-import QueueKanban, { GroupedQueueItems } from "./_components/queue_kanban"
-import { ReceptionPageSkeleton } from "./_components/reception-page-skeleton"
-
-/**
- * The primary server component for the `/reception` route. It wraps the
- * data-fetching component in a Suspense boundary to handle loading states.
- */
-export default async function ReceptionPage() {
-  return (
-    <Suspense fallback={<ReceptionPageSkeleton />}>
-      <QueueDataFetcher />
-    </Suspense>
-  )
-}
-
-/**
- * An asynchronous server component responsible for fetching and processing
- * the queue data before passing it to the client-side Kanban board.
- */
-async function QueueDataFetcher() {
-  // NOTE: This is a placeholder. In a multi-tenant application, this ID would
-  // be dynamically retrieved from the authenticated user's session or profile.
-  const MOCK_CLINIC_ID = "c7e2b8a0-3b7a-4b1e-8e0a-9e0e3e7f1b2a"
-
-  const result = await getQueueItemsByClinicAction(MOCK_CLINIC_ID)
-
-  // Handle cases where the data fetching action fails.
-  if (!result.isSuccess) {
-    // In a real application, you might render a more sophisticated error component.
-    return <div className="p-4 text-red-500">Error: {result.message}</div>
-  }
-
-  // Group the flat array of queue items into an object keyed by status.
-  const groupedData = (result.data || []).reduce<GroupedQueueItems>(
-    (acc, item) => {
-      // The status from the DB should always be valid, but we provide a
-      // fallback to prevent runtime errors.
-      const status = item.status!
-      if (!acc[status]) {
-        acc[status] = []
-      }
-      acc[status]!.push(item)
-      return acc
-    },
-    {}
-  )
-
-  // Render the client component with the prepared initial data.
-  return <QueueKanban initialData={groupedData} />
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/doctor/page.tsx
-/**
- * @file app/doctor/page.tsx
- *
- * @description
- * This file defines the server page for the Doctor's Dashboard. It's responsible
- * for fetching the list of patients assigned to a specific doctor and are
- * currently in the waitlist.
- *
- * @features
- * - **Role-Specific Data**: Fetches data relevant only to the logged-in doctor.
- * - **Suspense for Loading States**: Shows a skeleton loader while fetching data.
- * - **Server/Client Component Pattern**: Uses a server component for data fetching
- * and passes the result to a client component for display.
- *
- * @notes
- * - Mock IDs for `clinicId` and `doctorId` are used for now. These will be
- * replaced with dynamic data from the authenticated user's session.
- */
-"use server"
-
-import { Suspense } from "react"
-import { DoctorPageSkeleton } from "./_components/doctor-page-skeleton"
-import NextUpList from "./_components/next-up-list"
-import { getQueueItemsByDoctorIdAction } from "@/actions/db/queue_items_actions"
-
-/**
- * The main server component for the `/doctor` route, wrapping the data
- * fetcher in a Suspense boundary.
- */
-export default async function DoctorPage() {
-  return (
-    <Suspense fallback={<DoctorPageSkeleton />}>
-      <DoctorViewDataFetcher />
-    </Suspense>
-  )
-}
-
-/**
- * Async server component to fetch and pass data to the doctor's patient list.
- */
-async function DoctorViewDataFetcher() {
-  // NOTE: These are placeholders. In a real application, they would be
-  // dynamically retrieved from the authenticated user's session/profile.
-  const MOCK_CLINIC_ID = "c7e2b8a0-3b7a-4b1e-8e0a-9e0e3e7f1b2a"
-  const MOCK_DOCTOR_ID = "Singh"
-
-  const result = await getQueueItemsByDoctorIdAction(
-    MOCK_CLINIC_ID,
-    MOCK_DOCTOR_ID
-  )
-
-  if (!result.isSuccess) {
-    return <div className="p-4 text-red-500">Error: {result.message}</div>
-  }
-
-  return <NextUpList items={result.data} />
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
 /*
 This server layout provides a centered layout for (auth) pages.
@@ -3765,1219 +4348,90 @@ export default async function AuthLayout({ children }: AuthLayoutProps) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
 /*
-Hook to check if the user is on a mobile device.
+This server component provides a tailwind indicator for the app in dev mode.
 */
 
-import * as React from "react"
+"use server"
 
-const MOBILE_BREAKPOINT = 768
-
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return !!isMobile
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
-/*
-Hook for copying text to the clipboard.
-*/
-
-"use client"
-
-import { useState } from "react"
-
-export interface useCopyToClipboardProps {
-  timeout?: number
-}
-
-export function useCopyToClipboard({
-  timeout = 2000
-}: useCopyToClipboardProps) {
-  const [isCopied, setIsCopied] = useState<Boolean>(false)
-
-  const copyToClipboard = (value: string) => {
-    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
-      return
-    }
-
-    if (!value) {
-      return
-    }
-
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true)
-
-      setTimeout(() => {
-        setIsCopied(false)
-      }, timeout)
-    })
-  }
-
-  return { isCopied, copyToClipboard }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
-/*
-Hook to display toast notifications.
-*/
-
-"use client"
-
-// Inspired by react-hot-toast library
-import * as React from "react"
-
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
-type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-}
-
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST"
-} as const
-
-let count = 0
-
-function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
-}
-
-type ActionType = typeof actionTypes
-
-type Action =
-  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
-  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
-  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
-  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
-
-interface State {
-  toasts: ToasterToast[]
-}
-
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
-  }, TOAST_REMOVE_DELAY)
-
-  toastTimeouts.set(toastId, timeout)
-}
-
-export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
-      }
-
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        )
-      }
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach(toast => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
-        )
-      }
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return { ...state, toasts: [] }
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter(t => t.id !== action.toastId)
-      }
-  }
-}
-
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach(listener => {
-    listener(memoryState)
-  })
-}
-
-type Toast = Omit<ToasterToast, "id">
-
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: open => {
-        if (!open) dismiss()
-      }
-    }
-  })
-
-  return { id: id, dismiss, update }
-}
-
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
-
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [state])
-
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
-  }
-}
-
-export { toast, useToast }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/admin/_components/admin-dashboard-client.tsx
-/**
- * @file admin-dashboard-client.tsx
- *
- * @description
- * This client component renders the main UI for the admin dashboard. It takes
- * initial analytics data as props and provides a CSV download feature by calling
- * a dedicated server action.
- */
-"use client"
-
-import { exportConsultHistoryAction } from "@/actions/db/analytics-actions"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import { Clock, Download, Hourglass, LineChart } from "lucide-react"
-import { toast } from "sonner"
-
-interface AdminDashboardClientProps {
-  clinicId: string
-  averageTimes: {
-    avgWaitSeconds: number
-    avgConsultSeconds: number
-  }
-}
-
-// Helper function to format seconds into a "X min Y sec" string
-const formatSeconds = (seconds: number) => {
-  if (seconds < 60) return `${seconds} sec`
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-  return `${minutes} min ${remainingSeconds} sec`
-}
-
-export function AdminDashboardClient({
-  averageTimes,
-  clinicId
-}: AdminDashboardClientProps) {
-  const handleExport = async () => {
-    toast.info("Generating CSV file...")
-
-    const result = await exportConsultHistoryAction(clinicId)
-
-    if (!result.isSuccess) {
-      toast.error(result.message)
-      return
-    }
-
-    try {
-      const blob = new Blob([result.data.csv], {
-        type: "text/csv;charset=utf-8;"
-      })
-      const link = document.createElement("a")
-      const url = URL.createObjectURL(blob)
-      link.setAttribute("href", url)
-      link.setAttribute(
-        "download",
-        `qcare_consult_history_${new Date().toISOString().split("T")[0]}.csv`
-      )
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-      toast.success("CSV download started.")
-    } catch (error) {
-      console.error("Failed to trigger CSV download:", error)
-      toast.error("Failed to trigger CSV download.")
-    }
-  }
+export async function TailwindIndicator() {
+  // Don't show in production
+  if (process.env.NODE_ENV === "production") return null
 
   return (
-    <div className="space-y-6 p-4 md:p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <Button onClick={handleExport}>
-          <Download className="mr-2 size-4" />
-          Download CSV
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Avg. Wait Time
-            </CardTitle>
-            <Hourglass className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatSeconds(averageTimes.avgWaitSeconds)}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Average for patients today
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Avg. Consultation Time
-            </CardTitle>
-            <Clock className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatSeconds(averageTimes.avgConsultSeconds)}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Average for patients today
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <LineChart className="mr-2 size-5" />
-              Wait Time Trends
-            </CardTitle>
-            <CardDescription>
-              Chart visualization of wait times over the past week (WIP).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="bg-muted/50 flex h-[300px] items-center justify-center rounded-b-lg">
-            <p className="text-muted-foreground">
-              Chart component will be rendered here.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="fixed bottom-12 left-3 z-50 flex size-6 items-center justify-center rounded-full bg-gray-800 p-3 font-mono text-xs text-white">
+      <div className="block sm:hidden">xs</div>
+      <div className="hidden sm:block md:hidden">sm</div>
+      <div className="hidden md:block lg:hidden">md</div>
+      <div className="hidden lg:block xl:hidden">lg</div>
+      <div className="hidden xl:block 2xl:hidden">xl</div>
+      <div className="hidden 2xl:block">2xl</div>
     </div>
   )
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/doctor/_components/next-up-list.tsx
-/**
- * @file next-up-list.tsx
- *
- * @description
- * This client component displays the list of patients in the 'WAITLIST' for
- * a specific doctor and now includes real-time updates from Supabase.
- *
- * @props
- * - `items`: The initial array of `SelectQueueItem` objects.
- * - `doctorId`: The ID of the doctor to filter the queue for.
- */
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/theme-switcher.tsx
+/*
+This client component provides a theme switcher for the app.
+*/
+
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { SelectQueueItem } from "@/db/schema"
-import { supabase } from "@/lib/supabase-client"
-import { RealtimeChannel } from "@supabase/supabase-js"
-import { formatDistanceToNow } from "date-fns"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import MiniProfileDialog from "./mini_profile_dialog"
-
-// This component safely renders a relative time string on the client
-// to prevent hydration mismatch errors.
-function RelativeTime({ date }: { date: Date | string | null | undefined }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted || !date) {
-    return null // Don't render on the server or if date is null
-  }
-
-  // This will only run on the client
-  return <>{formatDistanceToNow(new Date(date), { addSuffix: true })}</>
-}
-
-interface NextUpListProps {
-  items: SelectQueueItem[]
-  doctorId: string
-}
-
-export default function NextUpList({ items, doctorId }: NextUpListProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<SelectQueueItem | null>(null)
-  const [patientList, setPatientList] = useState(items)
-  const router = useRouter()
-
-  useEffect(() => {
-    setPatientList(items)
-  }, [items])
-
-  useEffect(() => {
-    const channel: RealtimeChannel = supabase
-      .channel(`doctor-queue-${doctorId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "queue_items",
-          filter: `doctor_id=eq.${doctorId}`
-        },
-        payload => {
-          router.refresh()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [doctorId, router])
-
-  const handleViewProfileClick = (item: SelectQueueItem) => {
-    setSelectedItem(item)
-    setIsDialogOpen(true)
-  }
-
-  return (
-    <>
-      <div className="mx-auto w-full max-w-4xl p-4">
-        <h1 className="mb-6 text-3xl font-bold tracking-tight">
-          Your Upcoming Patients
-        </h1>
-
-        {patientList.length === 0 ? (
-          <p className="text-muted-foreground mt-8 text-center">
-            You have no patients in the waitlist.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {patientList.map(item => (
-              <Card key={item.id} className="bg-white shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{item.patientName}</span>
-                    <span className="text-muted-foreground text-sm font-medium">
-                      Waiting for <RelativeTime date={item.createdAt} />
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between">
-                  <p className="text-muted-foreground">
-                    {item.reason || "No reason provided."}
-                  </p>
-                  <div className="space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleViewProfileClick(item)}
-                    >
-                      View Profile
-                    </Button>
-                    <Button>Start Consult</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <MiniProfileDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        item={selectedItem}
-      />
-    </>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/doctor/_components/mini_profile_dialog.tsx
-/**
- * @file mini-profile-dialog.tsx
- *
- * @description
- * A client component that renders a dialog (modal) displaying a concise
- * profile of a patient. It is triggered from the doctor's "next up" list.
- *
- * @props
- * - `item`: The `SelectQueueItem` object for the patient whose profile is to be displayed.
- * - `isOpen`: A boolean to control whether the dialog is open or closed.
- * - `onOpenChange`: A function to handle changes to the dialog's open state.
- *
- * @dependencies
- * - `shadcn/ui`: For Dialog, Badge components.
- * - `lucide-react`: For icons.
- */
-"use client"
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription
-} from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { SelectQueueItem } from "@/db/schema"
-import { Separator } from "@/components/ui/separator"
-
-interface MiniProfileDialogProps {
-  item: SelectQueueItem | null
-  isOpen: boolean
-  onOpenChange: (isOpen: boolean) => void
-}
-
-export default function MiniProfileDialog({
-  item,
-  isOpen,
-  onOpenChange
-}: MiniProfileDialogProps) {
-  if (!item) {
-    return null
-  }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">{item.patientName}</DialogTitle>
-          <DialogDescription>
-            Patient mini-profile. Click outside to close.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-4">
-          <div className="flex flex-col space-y-3">
-            <h4 className="font-semibold">Chief Complaint</h4>
-            <p className="text-muted-foreground">
-              {item.reason || "Not specified."}
-            </p>
-          </div>
-
-          <Separator />
-
-          {/* NOTE: The fields below are placeholders as they are not yet in the DB schema. */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <h4 className="mb-1 font-semibold">Age</h4>
-              <p className="text-muted-foreground">34</p>
-            </div>
-            <div>
-              <h4 className="mb-1 font-semibold">Gender</h4>
-              <p className="text-muted-foreground">Female</p>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="mb-2 font-semibold">Vitals</h4>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">BP: 120/80</Badge>
-              <Badge variant="outline">HR: 72 bpm</Badge>
-              <Badge variant="outline">Temp: 98.6°F</Badge>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="mb-2 font-semibold">Known Allergies</h4>
-            <p className="text-muted-foreground">Penicillin</p>
-          </div>
-
-          <div>
-            <h4 className="mb-2 font-semibold">Recent Visit</h4>
-            <p className="text-muted-foreground">3 months ago for flu</p>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/doctor/_components/doctor-page-skeleton.tsx
-/**
- * @file doctor-page-skeleton.tsx
- *
- * @description
- * A client component that provides a skeleton loading state for the doctor's
- * dashboard. It mimics a list of upcoming patient cards.
- */
-"use client"
-
-export function DoctorPageSkeleton() {
-  return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 p-4">
-      <div className="bg-muted h-8 w-1/3 animate-pulse rounded-md" />
-      <div className="space-y-3">
-        <div className="bg-muted h-20 w-full animate-pulse rounded-lg" />
-        <div className="bg-muted h-20 w-full animate-pulse rounded-lg" />
-        <div className="bg-muted h-20 w-full animate-pulse rounded-lg" />
-      </div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/reception/_components/reception-page-skeleton.tsx
-/**
- * @file reception-page-skeleton.tsx
- *
- * @description
- * A client component that provides a skeleton loading state for the reception
- * dashboard. It mimics the layout of the Kanban board to give users an
- * immediate visual feedback while data is being fetched on the server.
- *
- * @notes
- * - Uses `animate-pulse` from Tailwind CSS for a subtle loading animation.
- * - The structure (4 columns) is designed to match the final Kanban layout.
- */
-"use client"
-
-export function ReceptionPageSkeleton() {
-  return (
-    <div className="size-full space-y-4 p-4">
-      <div className="bg-muted h-8 w-1/4 animate-pulse rounded-md" />
-
-      <div className="grid size-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="bg-muted/50 flex flex-col space-y-4 rounded-lg p-4"
-          >
-            <div className="bg-muted-foreground/20 h-6 w-1/2 animate-pulse rounded-md" />
-            <div className="bg-muted-foreground/20 h-24 w-full animate-pulse rounded-lg" />
-            <div className="bg-muted-foreground/20 h-24 w-full animate-pulse rounded-lg" />
-            <div className="bg-muted-foreground/20 h-24 w-full animate-pulse rounded-lg" />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/reception/_components/queue_kanban.tsx
-/**
- * @file queue-kanban.tsx
- *
- * @description
- * This client component renders the main Kanban-style board for the reception
- * dashboard. It receives initial queue data and then subscribes to real-time
- * updates from Supabase to keep the board synchronized across all clients.
- */
-"use client"
-
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  useDraggable,
-  useDroppable,
-  useSensor,
-  useSensors
-} from "@dnd-kit/core"
-import { arrayMove } from "@dnd-kit/sortable"
-import {
-  RealtimeChannel,
-  RealtimePostgresChangesPayload
-} from "@supabase/supabase-js"
-import { SelectQueueItem, queueStatusEnum } from "@/db/schema"
-import { useEffect, useMemo, useState } from "react"
-import { createPortal } from "react-dom"
-import QueueCard from "./queue_card"
-import { useQueueMutations } from "./use_queue_mutations"
-import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabase-client"
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+import { HTMLAttributes, ReactNode } from "react"
 
-export type GroupedQueueItems = {
-  [key in (typeof queueStatusEnum.enumValues)[number]]?: SelectQueueItem[]
+interface ThemeSwitcherProps extends HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode
 }
 
-interface QueueKanbanProps {
-  initialData: GroupedQueueItems
-}
+export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
+  const { setTheme, theme } = useTheme()
 
-const KANBAN_COLUMNS = queueStatusEnum.enumValues
-
-export default function QueueKanban({ initialData }: QueueKanbanProps) {
-  const [items, setItems] = useState<GroupedQueueItems>(initialData)
-  const [activeItem, setActiveItem] = useState<SelectQueueItem | null>(null)
-  const [isMounted, setIsMounted] = useState(false)
-
-  const { updateStatusMutation, reorderQueueMutation } = useQueueMutations()
-
-  useEffect(() => {
-    setIsMounted(true)
-
-    const handleRealtimeUpdate = (
-      payload: RealtimePostgresChangesPayload<{ [key: string]: any }>
-    ) => {
-      setItems(currentItems => {
-        const newItems = JSON.parse(JSON.stringify(currentItems))
-        const { eventType, new: newItem, old } = payload
-
-        if (eventType === "INSERT") {
-          const inserted = newItem as SelectQueueItem
-          if (!newItems[inserted.status!]) newItems[inserted.status!] = []
-          newItems[inserted.status!]!.push(inserted)
-          newItems[inserted.status!]!.sort(
-            (a: SelectQueueItem, b: SelectQueueItem) =>
-              a.position! - b.position!
-          )
-          return newItems
-        }
-
-        if (eventType === "UPDATE") {
-          const updated = newItem as Partial<SelectQueueItem>
-          let existingItem: SelectQueueItem | null = null
-
-          for (const status of KANBAN_COLUMNS) {
-            const items = newItems[status]
-            if (items) {
-              const itemIndex = items.findIndex(
-                (i: SelectQueueItem) => i.id === old.id
-              )
-              if (itemIndex !== -1) {
-                ;[existingItem] = items.splice(itemIndex, 1)
-                break
-              }
-            }
-          }
-
-          if (existingItem) {
-            const mergedItem = {
-              ...existingItem,
-              ...updated
-            } as SelectQueueItem
-            const targetStatus = mergedItem.status!
-
-            if (!newItems[targetStatus]) newItems[targetStatus] = []
-            newItems[targetStatus].push(mergedItem)
-            newItems[targetStatus].sort(
-              (a: SelectQueueItem, b: SelectQueueItem) =>
-                a.position! - b.position!
-            )
-          }
-          return newItems
-        }
-
-        if (eventType === "DELETE") {
-          for (const status of KANBAN_COLUMNS) {
-            if (newItems[status]) {
-              newItems[status] = newItems[status]!.filter(
-                (i: SelectQueueItem) => i.id !== old.id
-              )
-            }
-          }
-          return newItems
-        }
-
-        return currentItems
-      })
-    }
-
-    const channel: RealtimeChannel = supabase
-      .channel("queue-updates")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "queue_items" },
-        handleRealtimeUpdate
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8
-      }
-    })
-  )
-
-  const handleDragStart = (event: DragStartEvent) => {
-    const item = findItemById(event.active.id as string)
-    setActiveItem(item)
+  const handleChange = (theme: "dark" | "light") => {
+    localStorage.setItem("theme", theme)
+    setTheme(theme)
   }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveItem(null)
-
-    if (!over || active.id === over.id) return
-
-    const activeId = active.id as string
-
-    const activeContainer = findContainerById(activeId)
-    const overContainer = findContainerById(over.id as string)
-
-    if (!activeContainer || !overContainer) return
-
-    if (activeContainer === overContainer) {
-      const currentItems = items[activeContainer]!
-      const activeIndex = currentItems.findIndex(
-        (i: SelectQueueItem) => i.id === activeId
-      )
-      const overIndex = currentItems.findIndex(
-        (i: SelectQueueItem) => i.id === over.id
-      )
-
-      if (activeIndex !== overIndex) {
-        const reordered = arrayMove(currentItems, activeIndex, overIndex)
-        const itemsToUpdate = reordered.map(
-          (item: SelectQueueItem, index: number) => ({
-            id: item.id,
-            position: index
-          })
-        )
-        reorderQueueMutation(itemsToUpdate)
-      }
-    } else {
-      updateStatusMutation(activeId, overContainer)
-    }
-  }
-
-  const handleAdvance = (id: string) => {
-    const item = findItemById(id)
-    if (!item || item.status === "COMPLETE" || item.status === "CANCELLED")
-      return
-
-    const nextStatus = item.status === "WAITLIST" ? "SERVING" : "COMPLETE"
-    updateStatusMutation(id, nextStatus)
-  }
-
-  const handleCancel = (id: string) => {
-    updateStatusMutation(id, "CANCELLED")
-  }
-
-  const handleNotify = (id: string) => {
-    const item = findItemById(id)
-    toast(`Sending reminder to ${item?.patientName}...`)
-  }
-
-  const findItemById = (id: string): SelectQueueItem | null => {
-    for (const status of KANBAN_COLUMNS) {
-      const item = items[status]?.find((i: SelectQueueItem) => i.id === id)
-      if (item) return item
-    }
-    return null
-  }
-
-  const findContainerById = (
-    id: string
-  ): (typeof KANBAN_COLUMNS)[number] | null => {
-    if (KANBAN_COLUMNS.includes(id as any)) {
-      return id as (typeof KANBAN_COLUMNS)[number]
-    }
-    return findItemById(id)?.status ?? null
-  }
-
-  const columns = useMemo(
-    () =>
-      KANBAN_COLUMNS.map(status => (
-        <QueueColumn key={status} id={status} title={status}>
-          {items[status]?.map(item => (
-            <DraggableQueueCard
-              key={item.id}
-              item={item}
-              onAdvance={handleAdvance}
-              onCancel={handleCancel}
-              onNotify={handleNotify}
-            />
-          ))}
-        </QueueColumn>
-      )),
-    [items, handleAdvance, handleCancel, handleNotify]
-  )
-
-  return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid h-[calc(100vh-80px)] auto-rows-max grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
-        {columns}
-      </div>
-
-      {isMounted
-        ? createPortal(
-            <DragOverlay>
-              {activeItem ? (
-                <QueueCard
-                  item={activeItem}
-                  isOverlay
-                  onAdvance={() => {}}
-                  onCancel={() => {}}
-                  onNotify={() => {}}
-                />
-              ) : null}
-            </DragOverlay>,
-            document.body
-          )
-        : null}
-    </DndContext>
-  )
-}
-
-function QueueColumn({
-  id,
-  title,
-  children
-}: {
-  id: string
-  title: string
-  children: React.ReactNode
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
     <div
-      ref={setNodeRef}
       className={cn(
-        "bg-muted/50 flex h-full flex-col gap-y-2 rounded-lg p-2 transition-colors",
-        isOver && "bg-muted"
+        "p-1 hover:cursor-pointer hover:opacity-50",
+        props.className
       )}
+      onClick={() => handleChange(theme === "light" ? "dark" : "light")}
     >
-      <h3 className="text-md text-foreground px-2 font-semibold capitalize tracking-tight">
-        {title.toLowerCase()}
-      </h3>
-      <div className="grow space-y-2 overflow-y-auto p-1">{children}</div>
-    </div>
-  )
-}
-
-interface DraggableQueueCardProps {
-  item: SelectQueueItem
-  onAdvance: (id: string) => void
-  onCancel: (id: string) => void
-  onNotify: (id: string) => void
-}
-
-function DraggableQueueCard({
-  item,
-  onAdvance,
-  onCancel,
-  onNotify
-}: DraggableQueueCardProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: item.id,
-    data: { item }
-  })
-
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      style={{ opacity: isDragging ? 0.5 : 1 }}
-    >
-      <QueueCard
-        item={item}
-        onAdvance={onAdvance}
-        onCancel={onCancel}
-        onNotify={onNotify}
-      />
+      {theme === "dark" ? (
+        <Moon className="size-6" />
+      ) : (
+        <Sun className="size-6" />
+      )}
     </div>
   )
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/reception/_components/use_queue_mutations.ts
-/**
- * @file use-queue-mutations.ts
- *
- * @description
- * This custom hook encapsulates the logic for calling server actions that
- * mutate queue data. It centralizes server communication and user feedback
- * (via toasts) for operations like updating a patient's status or reordering
- * the queue.
- *
- * @dependencies
- * - `react`: For `useCallback` and `useTransition` for managing pending states.
- * - `sonner`: For displaying toast notifications.
- * - `@/actions/db/queue-items-actions`: The server actions to be called.
- */
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/providers.tsx
+/*
+This client component provides the providers for the app.
+*/
+
 "use client"
 
+import { TooltipProvider } from "@/components/ui/tooltip"
 import {
-  reorderQueueAction,
-  updateQueueStatusAction
-} from "@/actions/db/queue_items_actions"
-import { queueStatusEnum } from "@/db/schema"
-import { useCallback } from "react"
-import { toast } from "sonner"
+  ThemeProvider as NextThemesProvider,
+  ThemeProviderProps
+} from "next-themes"
 
-export function useQueueMutations() {
-  const updateStatusMutation = useCallback(
-    async (
-      itemId: string,
-      newStatus: (typeof queueStatusEnum.enumValues)[number]
-    ) => {
-      toast.loading(`Moving patient to ${newStatus.toLowerCase()}...`)
-
-      const result = await updateQueueStatusAction(itemId, newStatus)
-
-      if (result.isSuccess) {
-        toast.success(result.message)
-      } else {
-        toast.error(result.message)
-      }
-    },
-    []
-  )
-
-  const reorderQueueMutation = useCallback(
-    async (items: { id: string; position: number }[]) => {
-      toast.loading("Reordering queue...")
-
-      const result = await reorderQueueAction(items)
-
-      if (result.isSuccess) {
-        toast.success(result.message)
-      } else {
-        toast.error(result.message)
-      }
-    },
-    []
-  )
-
-  return { updateStatusMutation, reorderQueueMutation }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/reception/_components/queue_card.tsx
-/**
- * @file queue-card.tsx
- *
- * @description
- * This client component renders a single patient card for the Kanban board.
- * It displays essential patient information and provides action buttons that
- * trigger callback functions passed down as props.
- */
-"use client"
-
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import { SelectQueueItem } from "@/db/schema"
-import { cn } from "@/lib/utils"
-import { formatDistanceToNow } from "date-fns"
-import { Bell, Check, User, X } from "lucide-react"
-import { useEffect, useState } from "react"
-
-// This component safely renders a relative time string on the client
-// to prevent hydration mismatch errors.
-function RelativeTime({ date }: { date: Date | string | null | undefined }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted || !date) {
-    return null // Don't render on the server or if date is null
-  }
-
-  // This will only run on the client
-  return <>{formatDistanceToNow(new Date(date), { addSuffix: true })}</>
-}
-
-interface QueueCardProps {
-  item: SelectQueueItem
-  onAdvance: (id: string) => void
-  onCancel: (id: string) => void
-  onNotify: (id: string) => void
-  isOverlay?: boolean
-}
-
-export default function QueueCard({
-  item,
-  onAdvance,
-  onCancel,
-  onNotify,
-  isOverlay
-}: QueueCardProps) {
-  const handleAdvanceClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent dnd-kit from capturing the click
-    onAdvance(item.id)
-  }
-
-  const handleCancelClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onCancel(item.id)
-  }
-
-  const handleNotifyClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onNotify(item.id)
-  }
-
+export const Providers = ({ children, ...props }: ThemeProviderProps) => {
   return (
-    <Card
-      className={cn(
-        "mb-4 touch-none bg-white shadow-sm transition-shadow hover:shadow-md",
-        isOverlay && "ring-primary ring-2"
-      )}
-    >
-      <CardHeader className="p-4 pb-2">
-        <CardTitle className="flex cursor-grab items-center justify-between text-base font-bold">
-          <span>{item.patientName}</span>
-          {item.position !== null && item.position >= 0 && (
-            <span className="text-muted-foreground text-sm font-normal">
-              #{item.position + 1}
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="space-y-2 px-4 pb-2">
-        {item.reason && (
-          <p className="text-muted-foreground text-sm">{item.reason}</p>
-        )}
-
-        {item.doctorId && (
-          <div className="text-muted-foreground flex items-center text-xs">
-            <User className="mr-1.5 size-3" />
-            <span>Dr. {item.doctorId}</span>
-          </div>
-        )}
-
-        <p className="text-muted-foreground pt-1 text-xs">
-          Waiting: <RelativeTime date={item.createdAt} />
-        </p>
-      </CardContent>
-
-      <CardFooter className="flex justify-between p-2 pt-0">
-        <div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleNotifyClick}
-            disabled={!item.phone}
-            title={item.phone ? "Send Reminder" : "No phone number available"}
-          >
-            <Bell className="size-4" />
-          </Button>
-        </div>
-
-        <div className="space-x-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCancelClick}
-            title="Cancel Appointment"
-          >
-            <X className="text-destructive size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleAdvanceClick}
-            title="Advance to Next Stage"
-          >
-            <Check className="size-5 text-green-600" />
-          </Button>
-        </div>
-      </CardFooter>
-    </Card>
+    <NextThemesProvider {...props}>
+      <TooltipProvider>{children}</TooltipProvider>
+    </NextThemesProvider>
   )
 }
 
@@ -5293,6 +4747,68 @@ export type InsertClinic = typeof clinicsTable.$inferInsert
 export type SelectClinic = typeof clinicsTable.$inferSelect
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/app/q/[queueId]/page.tsx
+/**
+ * @file app/q/[queueId]/page.tsx
+ *
+ * @description
+ * This file defines the server page for viewing a single patient's
+ * queue status. It fetches data based on the `queueId` provided in the URL.
+ */
+"use server"
+
+import { Suspense } from "react"
+import PatientQueueView from "./_components/patient-queue-view"
+import { getPublicQueueItemDetailsAction } from "@/actions/db/queue_items_actions"
+
+interface PatientQueuePageProps {
+  params: {
+    queueId: string
+  }
+}
+
+/**
+ * The primary server component for the dynamic `/q/[queueId]` route. It awaits
+ * the params and then uses a Suspense boundary to handle loading states.
+ */
+export default async function PatientQueuePage({
+  params
+}: PatientQueuePageProps) {
+  // Await the params promise to get the resolved value
+  const { queueId } = await params
+
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Loading your queue status...
+        </div>
+      }
+    >
+      <PatientQueueFetcher queueId={queueId} />
+    </Suspense>
+  )
+}
+
+/**
+ * An asynchronous server component responsible for fetching the specific patient's
+ * queue data and passing it to the display component.
+ */
+async function PatientQueueFetcher({ queueId }: { queueId: string }) {
+  const result = await getPublicQueueItemDetailsAction(queueId)
+
+  if (!result.isSuccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center font-semibold text-red-500">
+        Error: {result.message}
+      </div>
+    )
+  }
+
+  return <PatientQueueView initialData={result.data} />
+}
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/app/api/stripe/webhooks/route.ts
 /*
 This API route handles Stripe webhook events to manage subscription status changes and updates user profiles accordingly.
@@ -5390,66 +4906,26 @@ async function handleCheckoutSession(event: Stripe.Event) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/q/[queueId]/page.tsx
-/**
- * @file app/q/[queueId]/page.tsx
- *
- * @description
- * This file defines the server page for viewing a single patient's
- * queue status. It fetches data based on the `queueId` provided in the URL.
- */
-"use server"
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
+/*
+This client page provides the signup form from Clerk.
+*/
 
-import { Suspense } from "react"
-import PatientQueueView from "./_components/patient-queue-view"
-import { getPublicQueueItemDetailsAction } from "@/actions/db/queue_items_actions"
+"use client"
 
-interface PatientQueuePageProps {
-  // Per Next.js 15+, params in dynamic server pages are a Promise
-  params: Promise<{
-    queueId: string
-  }>
-}
+import { SignUp } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
 
-/**
- * The primary server component for the dynamic `/q/[queueId]` route. It awaits
- * the params and then uses a Suspense boundary to handle loading states.
- */
-export default async function PatientQueuePage({
-  params
-}: PatientQueuePageProps) {
-  // Await the params promise to get the resolved value
-  const { queueId } = await params
+export default function SignUpPage() {
+  const { theme } = useTheme()
 
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          Loading your queue status...
-        </div>
-      }
-    >
-      <PatientQueueFetcher queueId={queueId} />
-    </Suspense>
+    <SignUp
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
   )
-}
-
-/**
- * An asynchronous server component responsible for fetching the specific patient's
- * queue data and passing it to the display component.
- */
-async function PatientQueueFetcher({ queueId }: { queueId: string }) {
-  const result = await getPublicQueueItemDetailsAction(queueId)
-
-  if (!result.isSuccess) {
-    return (
-      <div className="flex min-h-screen items-center justify-center font-semibold text-red-500">
-        Error: {result.message}
-      </div>
-    )
-  }
-
-  return <PatientQueueView initialData={result.data} />
 }
 
 
@@ -5469,29 +4945,6 @@ export default function LoginPage() {
 
   return (
     <SignIn
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
-/*
-This client page provides the signup form from Clerk.
-*/
-
-"use client"
-
-import { SignUp } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function SignUpPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignUp
       forceRedirectUrl="/"
       appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
     />
@@ -5592,505 +5045,7 @@ export default function PatientQueueView({
   )
 }
 
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/landing/footer.tsx
-/*
-This server component provides the footer for the app.
-*/
-
-import { Github, Twitter } from "lucide-react"
-import Link from "next/link"
-
-export async function Footer() {
-  return (
-    <footer className="border-t">
-      <div className="container mx-auto max-w-7xl px-4 py-12 md:px-6">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold">Company</h3>
-            <div className="flex flex-col gap-2">
-              <Link
-                href="/about"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                About
-              </Link>
-              <Link
-                href="/blog"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Blog
-              </Link>
-              <Link
-                href="/careers"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Careers
-              </Link>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold">Product</h3>
-            <div className="flex flex-col gap-2">
-              <Link
-                href="/features"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Features
-              </Link>
-              <Link
-                href="/pricing"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Pricing
-              </Link>
-              <Link
-                href="/docs"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Documentation
-              </Link>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold">Resources</h3>
-            <div className="flex flex-col gap-2">
-              <Link
-                href="/support"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Support
-              </Link>
-              <Link
-                href="/terms"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Terms
-              </Link>
-              <Link
-                href="/privacy"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Privacy
-              </Link>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold">Social</h3>
-            <div className="flex gap-4">
-              <Link
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Github className="text-muted-foreground hover:text-foreground size-6 transition" />
-              </Link>
-              <Link
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Twitter className="text-muted-foreground hover:text-foreground size-6 transition" />
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-muted-foreground mt-12 pt-8 text-center">
-          <p>
-            &copy; {new Date().getFullYear()} Your Company. All rights reserved.
-          </p>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/landing/header.tsx
-/*
-This client component provides the header for the app.
-*/
-
-"use client"
-
-import { Button } from "@/components/ui/button"
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  SignUpButton,
-  UserButton
-} from "@clerk/nextjs"
-import { motion } from "framer-motion"
-import { Menu, Receipt, X } from "lucide-react"
-import Link from "next/link"
-import { useEffect, useState } from "react"
-
-const navLinks = [
-  { href: "/about", label: "About" },
-  { href: "/features", label: "Features" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/contact", label: "Contact" }
-]
-
-const signedInLinks = [{ href: "/dashboard", label: "Dashboard" }]
-
-export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen)
-  }
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0)
-    }
-
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
-
-  return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className={`sticky top-0 z-50 transition-colors ${
-        isScrolled
-          ? "bg-background/80 shadow-sm backdrop-blur-sm"
-          : "bg-background"
-      }`}
-    >
-      <div className="container mx-auto flex max-w-7xl items-center justify-between p-4">
-        <motion.div
-          className="flex items-center space-x-2 hover:cursor-pointer hover:opacity-80"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Receipt className="size-6" />
-          <Link href="/" className="text-xl font-bold">
-            Receipt AI
-          </Link>
-        </motion.div>
-
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 space-x-2 md:flex">
-          {navLinks.map(link => (
-            <motion.div
-              key={link.href}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Link
-                href={link.href}
-                className="text-muted-foreground hover:text-foreground rounded-full px-3 py-1 transition"
-              >
-                {link.label}
-              </Link>
-            </motion.div>
-          ))}
-
-          <SignedIn>
-            {signedInLinks.map(link => (
-              <motion.div
-                key={link.href}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link
-                  href={link.href}
-                  className="text-muted-foreground hover:text-foreground rounded-full px-3 py-1 transition"
-                >
-                  {link.label}
-                </Link>
-              </motion.div>
-            ))}
-          </SignedIn>
-        </nav>
-
-        <div className="flex items-center space-x-4">
-          <SignedOut>
-            <SignInButton>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button variant="ghost">Sign In</Button>
-              </motion.div>
-            </SignInButton>
-
-            <SignUpButton>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button>Get Started</Button>
-              </motion.div>
-            </SignUpButton>
-          </SignedOut>
-
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
-
-          <motion.div
-            className="md:hidden"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleMenu}
-              aria-label="Toggle menu"
-            >
-              {isMenuOpen ? (
-                <X className="size-6" />
-              ) : (
-                <Menu className="size-6" />
-              )}
-            </Button>
-          </motion.div>
-        </div>
-      </div>
-
-      {isMenuOpen && (
-        <motion.nav
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="bg-primary-foreground text-primary p-4 md:hidden"
-        >
-          <ul className="space-y-2">
-            <li>
-              <Link
-                href="/"
-                className="block hover:underline"
-                onClick={toggleMenu}
-              >
-                Home
-              </Link>
-            </li>
-            {navLinks.map(link => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="block hover:underline"
-                  onClick={toggleMenu}
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-            <SignedIn>
-              {signedInLinks.map(link => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="block hover:underline"
-                    onClick={toggleMenu}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </SignedIn>
-          </ul>
-        </motion.nav>
-      )}
-    </motion.header>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/landing/hero.tsx
-/*
-This client component provides the hero section for the landing page.
-*/
-
-"use client"
-
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { motion } from "framer-motion"
-import { ChevronRight, Rocket } from "lucide-react"
-import Link from "next/link"
-import AnimatedGradientText from "../magicui/animated-gradient-text"
-import HeroVideoDialog from "../magicui/hero-video-dialog"
-
-export const HeroSection = () => {
-  return (
-    <div className="flex flex-col items-center justify-center px-8 pt-32 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="flex items-center justify-center"
-      >
-        <Link href="https://github.com/mckaywrigley/o1-pro-template-system">
-          <AnimatedGradientText>
-            🚀 <hr className="mx-2 h-4 w-px shrink-0 bg-gray-300" />
-            <span
-              className={cn(
-                `animate-gradient inline bg-gradient-to-r from-[#ffaa40] via-[#9c40ff] to-[#ffaa40] bg-[length:var(--bg-size)_100%] bg-clip-text text-transparent`
-              )}
-            >
-              View the code on GitHub
-            </span>
-            <ChevronRight className="ml-1 size-3 transition-transform duration-300 ease-in-out group-hover:translate-x-0.5" />
-          </AnimatedGradientText>
-        </Link>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-        className="mt-8 flex max-w-2xl flex-col items-center justify-center gap-6"
-      >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-          className="text-balance text-6xl font-bold"
-        >
-          Receipt AI
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
-          className="max-w-xl text-balance text-xl"
-        >
-          Transform receipts and invoices into organized data instantly with AI.
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8, ease: "easeOut" }}
-        >
-          <Link href="https://github.com/mckaywrigley/o1-pro-template-system">
-            <Button className="bg-blue-500 text-lg hover:bg-blue-600">
-              <Rocket className="mr-2 size-5" />
-              Get Started &rarr;
-            </Button>
-          </Link>
-        </motion.div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, delay: 1, ease: "easeOut" }}
-        className="mx-auto mt-20 flex w-full max-w-screen-lg items-center justify-center rounded-lg border shadow-lg"
-      >
-        <HeroVideoDialog
-          animationStyle="top-in-bottom-out"
-          videoSrc="https://www.youtube.com/embed/9yS0dR0kP-s"
-          thumbnailSrc="hero.png"
-          thumbnailAlt="Hero Video"
-        />
-      </motion.div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/providers.tsx
-/*
-This client component provides the providers for the app.
-*/
-
-"use client"
-
-import { TooltipProvider } from "@/components/ui/tooltip"
-import {
-  ThemeProvider as NextThemesProvider,
-  ThemeProviderProps
-} from "next-themes"
-
-export const Providers = ({ children, ...props }: ThemeProviderProps) => {
-  return (
-    <NextThemesProvider {...props}>
-      <TooltipProvider>{children}</TooltipProvider>
-    </NextThemesProvider>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
-/*
-This server component provides a tailwind indicator for the app in dev mode.
-*/
-
-"use server"
-
-export async function TailwindIndicator() {
-  // Don't show in production
-  if (process.env.NODE_ENV === "production") return null
-
-  return (
-    <div className="fixed bottom-12 left-3 z-50 flex size-6 items-center justify-center rounded-full bg-gray-800 p-3 font-mono text-xs text-white">
-      <div className="block sm:hidden">xs</div>
-      <div className="hidden sm:block md:hidden">sm</div>
-      <div className="hidden md:block lg:hidden">md</div>
-      <div className="hidden lg:block xl:hidden">lg</div>
-      <div className="hidden xl:block 2xl:hidden">xl</div>
-      <div className="hidden 2xl:block">2xl</div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/theme-switcher.tsx
-/*
-This client component provides a theme switcher for the app.
-*/
-
-"use client"
-
-import { cn } from "@/lib/utils"
-import { Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
-import { HTMLAttributes, ReactNode } from "react"
-
-interface ThemeSwitcherProps extends HTMLAttributes<HTMLDivElement> {
-  children?: ReactNode
-}
-
-export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
-  const { setTheme, theme } = useTheme()
-
-  const handleChange = (theme: "dark" | "light") => {
-    localStorage.setItem("theme", theme)
-    setTheme(theme)
-  }
-
-  return (
-    <div
-      className={cn(
-        "p-1 hover:cursor-pointer hover:opacity-50",
-        props.className
-      )}
-      onClick={() => handleChange(theme === "light" ? "dark" : "light")}
-    >
-      {theme === "dark" ? (
-        <Moon className="size-6" />
-      ) : (
-        <Sun className="size-6" />
-      )}
-    </div>
-  )
-}
-
 </file_contents>
-
 
 
 </existing_code>

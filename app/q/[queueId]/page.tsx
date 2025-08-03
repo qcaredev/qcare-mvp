@@ -12,10 +12,9 @@ import PatientQueueView from "./_components/patient-queue-view"
 import { getPublicQueueItemDetailsAction } from "@/actions/db/queue_items_actions"
 
 interface PatientQueuePageProps {
-  // Per Next.js 15+, params in dynamic server pages are a Promise
-  params: Promise<{
+  params: {
     queueId: string
-  }>
+  }
 }
 
 /**

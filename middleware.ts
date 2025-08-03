@@ -1,35 +1,22 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { authMiddleware } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher([
-  "/reception(.*)",
-  "/doctor(.*)",
-  "/admin(.*)",
-]);
-
-export default clerkMiddleware(async (auth, req) => {
-  const { userId, redirectToSignIn } = await auth();
-
-  // If the user is logged in and trying to access the root page, redirect them to /reception.
-  if (userId && req.nextUrl.pathname === "/") {
-    const receptionUrl = new URL("/reception", req.url);
-    return NextResponse.redirect(receptionUrl);
-  }
-
-  // If the user isn't signed in and the route is private, redirect to sign-in
-  if (!userId && isProtectedRoute(req)) {
-    return redirectToSignIn({ returnBackUrl: req.url });
-  }
-
-  // If the user is logged in and the route is protected, let them view.
-  if (userId && isProtectedRoute(req)) {
-    return NextResponse.next();
-  }
-
-  // Default: continue
-  return NextResponse.next();
+// This is the simplest and most robust way to configure Clerk middleware for the packages we've installed.
+// It protects all routes by default.
+// Public routes are exempted via the publicRoutes array.
+export default authMiddleware({
+  publicRoutes: [
+    "/",
+    "/about",
+    "/contact",
+    "/features",
+    "/pricing",
+    "/q/(.*)", // Public patient tracking page (e.g., /q/some-id)
+    "/api/stripe/webhooks",
+  ],
 });
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+  // The matcher ensures that the middleware runs on all routes except for
+  // static assets and Next.js-specific paths.
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
 };
