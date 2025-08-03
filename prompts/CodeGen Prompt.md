@@ -1694,99 +1694,156 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 # Implementation Plan
 
 ## 0 – Bootstrap & Configuration
-- [X] **Step 0.1: Install runtime dependencies**
-- [X] **Step 0.2: Extend environment variables**
 
-## 1 – Database Schema
-- [X] **Step 1.1: Define enums & tables**
-- [X] **Step 1.2: SQL for RLS & Realtime**
+- [x] **Step 0.1: Install runtime dependencies**
+- [x] **Step 0.2: Extend environment variables**
+  - Note: Will require new variables for email services (e.g., Resend API key) used for invitations.
+
+## 1 – Hierarchical Database Schema
+
+- [ ] **Step 1.1: Define Organization & Branch tables**
+  - Task: Create an organizations table. Create a branches table with a foreign key relationship to organizations (organization_id).
+  - Files: `supabase/migrations/<..._create_orgs_and_branches.sql>`
+
+- [ ] **Step 1.2: Update User Profile & Roles**
+  - Task: The users or profiles table linked to Clerk users must be updated. It will now store organization_id, branch_id, and a role enum (super_admin, branch_admin, doctor, receptionist). This establishes each user's place in the hierarchy.
+  - Files: `supabase/migrations/<..._update_users_table.sql>`
+
+- [ ] **Step 1.3: Partition Application Data**
+  - Task: Add a mandatory branch_id foreign key to all branch-specific tables, including queue_items and a new branch_settings table (which replaces the old clinic_settings). This is critical for data isolation.
+  - Files: `supabase/migrations/<..._partition_app_data.sql>`
+
+- [ ] **Step 1.4: Update RLS Policies for Hierarchy**
+  - Task: Rewrite all Row-Level Security (RLS) policies. Policies must now check the user's role and branch_id from their session claims to ensure they can only access data belonging to their assigned branch. Super Admins will have broader access based on their organization_id.
+  - Files: `supabase/migrations/<..._update_rls_policies.sql>`
 
 ## 2 – Server Actions (Database)
-- [X] **Step 2.1: createQueueItemAction**
-- [X] **Step 2.2: reorderQueueAction**
-- [X] **Step 2.3: updateQueueStatusAction**
+
+- [x] **Step 2.1: createQueueItemAction (NEEDS UPDATE)**
+  - Task: Action must now automatically associate the new queue item with the calling user's branch_id.
+  - Files: `actions/db/queue-items-actions.ts`
+
+- [x] **Step 2.2: reorderQueueAction (NEEDS UPDATE)**
+  - Task: All queries within this action must be scoped to the user's branch_id.
+  - Files: `actions/db/queue-items-actions.ts`
+
+- [x] **Step 2.3: updateQueueStatusAction (NEEDS UPDATE)**
+  - Task: All queries within this action must be scoped to the user's branch_id.
+  - Files: `actions/db/queue-items-actions.ts`
+
+- [ ] **Step 2.4: NEW - Org, Branch, & User Management Actions**
+  - Task: Create new server actions for admins:
+    - createBranchAction (for Super Admins)
+    - inviteUserAction (for Super/Branch Admins, sends email)
+    - getUsersForBranchAction (for admin dashboards)
+    - updateUserRoleAction, deleteUserAction
+  - Files: `actions/db/management-actions.ts`
 
 ## 3 – Server Actions (Twilio)
-- [X] **Step 3.1: sendWhatsAppMessageAction**
+
+- [x] **Step 3.1: sendWhatsAppMessageAction (NEEDS UPDATE)**
+  - Task: Before sending a message, the action must fetch the notification settings (template, etc.) from the branch_settings table corresponding to the patient's branch_id.
+  - Files: `actions/twilio-actions.ts`
 
 ## 4 – Reception Dashboard
-- [X] **Step 4.1: Route & Server Page**
-- [X] **Step 4.2: Kanban Client Component**
-- [X] **Step 4.3: Queue Mutations Hooks**
+
+- [x] **Step 4.1: Route & Server Page (NEEDS UPDATE)**
+  - Task: The page's data-fetching logic must be implicitly scoped to the logged-in receptionist's branch.
+  - Files: `app/reception/page.tsx`
+
+- [x] **Step 4.2: Kanban Client Component**
+  - Note: No change to component logic, but data source is now filtered.
+
+- [x] **Step 4.3: Queue Mutations Hooks**
+  - Note: No change to hooks, but server actions they call are now branch-aware.
 
 ## 5 – Doctor Dashboard
-- [X] **Step 5.1: Route & Server Page**
-- [X] **Step 5.2: Mini-Profile Dialog**
+
+- [x] **Step 5.1: Route & Server Page (NEEDS UPDATE)**
+  - Task: The page must fetch and display only the patients assigned to the logged-in doctor within their specific branch.
+  - Files: `app/doctor/page.tsx`
+
+- [x] **Step 5.2: Mini-Profile Dialog**
+  - Note: No change.
 
 ## 6 – Patient Public Page
-- [X] **Step 6.1: Route**
+
+- [ ] **Step 6.1: Branch-Aware Patient Route**
+  - Task: The public-facing patient status page needs to identify the branch, likely via the URL (e.g., `/q/nims-bangalore/[patientId]`). The backend will use the URL slug to query the correct branch's queue.
+  - Files: `app/q/[branchSlug]/[patientId]/page.tsx`
 
 ## 7 – Supabase Realtime Integration
-- [X] **Step 7.1: Realtime client util**
-- [X] **Step 7.2: Hook in dashboards**
 
-## 8 – Admin & Analytics
-- [X] **Step 8.1: Analytics queries**
-  - **Task**: `actions/db/analytics-actions.ts` – daily avg wait, CSV export.
-  - **Files**:  
-    - `actions/db/analytics-actions.ts`
-  - **Step Dependencies**: 2.3
+- [ ] **Step 7.1: Branch-Specific Realtime Channels**
+  - Task: Modify the Realtime client utility. Instead of subscribing to a generic channel like queue, it must subscribe to a dynamic, branch-specific channel, e.g., `queue-changes-for-branch-BRN123`. This is essential for security and to prevent data leakage between branches.
+  - Files: `lib/supabase/realtime.ts`
 
-- [X] **Step 8.2: Admin page**
-  - **Task**: `app/admin/page.tsx` – charts with recharts, CSV download button.
-  - **Files**:  
-    - `app/admin/page.tsx`
-  - **Step Dependencies**: 8.1
+- [x] **Step 7.2: Hook in dashboards (NEEDS UPDATE)**
+  - Task: Update dashboard hooks to use the new branch-specific channels.
 
-## 9 – Settings Panel
-- [X] **Step 9.1: Clinic settings CRUD**
-  - **Task**: Server actions + simple form to update alert threshold & language.
-  - **Files**:  
-    - `actions/db/clinic-settings-actions.ts`
-    - `app/admin/_components/settings-form.tsx`
-  - **Step Dependencies**: 1.1, 8.2
+## 8 – Signup & Onboarding Flow
 
-## 10 – Auth & Authorization Enhancements
-- [X] **Step 10.1: Role claims helper**
-  - **Task**: Add `lib/use-role.ts` (reads Clerk public metadata for role: staff, doctor, admin).
-  - **Files**:  
-    - `lib/use-role.ts`
-  - **Step Dependencies**: none (can run anytime before protected pages)
+- [ ] **Step 8.1: Organization Signup Page**
+  - Task: The "Get Started" button on the landing page will now lead to an Organization signup form. This flow creates the organization and the initial super_admin user.
+  - Files: `app/sign-up/page.tsx`
 
-- [ ] **Step 10.2: Protected route middleware update**
-  - **Task**: Extend `middleware.ts` to guard `/reception`, `/doctor`, `/admin` by role.
-  - **Files**:  
-    - `middleware.ts`
-  - **Step Dependencies**: 10.1
+- [ ] **Step 8.2: User Invitation Acceptance Page**
+  - Task: Create a page for invited users (e.g., `/accept-invite?token=...`). Here, they set their password. On completion, their user record is fully activated with the pre-assigned role and branch. Clerk's invitation features can be used here.
+  - Files: `app/accept-invite/page.tsx`
+
+## 9 – Admin Dashboards & Settings
+
+- [ ] **Step 9.1: Branch Admin Dashboard**
+  - Task: The `/admin` route for a branch_admin will show analytics (Avg. Wait Time, etc.) and settings. All data queries for analytics and settings forms must be scoped to their branch_id.
+  - Files: `app/admin/page.tsx`, `app/admin/_components/branch-settings-form.tsx`, `app/admin/_components/branch-user-management.tsx`
+
+- [ ] **Step 9.2: Super Admin Dashboard**
+  - Task: A super_admin visiting `/admin` gets an enhanced view. This dashboard must include:
+    1. A "Branch Management" panel to create/view branches.
+    2. A "User Management" panel to invite/manage users across all branches.
+    3. A "Branch Selector" dropdown to view the specific admin dashboard (analytics, settings) for any branch within their organization.
+  - Files: `app/admin/_components/super-admin-view.tsx`
+
+## 10 – Hierarchical Auth & Authorization
+
+- [ ] **Step 10.1: Role & ID Claims in JWT**
+  - Task: Configure Clerk to add organization_id, branch_id, and role to the user's publicMetadata upon signup/invitation. This data will be available in the session token for server-side and middleware validation.
+  - Files: `/api/clerk-webhook` (or similar serverless function to handle user creation events)
+
+- [ ] **Step 10.2: Protected Route Middleware Update**
+  - Task: This is the most critical logic update. The middleware.ts must be rewritten to enforce the new rules:
+    - A receptionist can ONLY access `/reception`.
+    - A doctor can ONLY access `/doctor`.
+    - A branch_admin can access `/reception`, `/doctor`, and `/admin`.
+    - A super_admin has the same access as a branch admin (with expanded capabilities within the UI).
+    - Redirect any unauthorized access attempts.
+  - Files: `middleware.ts`
 
 ## 11 – Notifications Logic
-- [ ] **Step 11.1: Automatic “You’re next” trigger**
-  - **Task**: In `updateQueueStatusAction` and `reorderQueueAction`, detect position ≤ threshold & call Twilio action.
-  - **Files**:  
-    - `actions/db/queue-items-actions.ts`
-  - **Step Dependencies**: 3.1
+
+- [ ] **Step 11.1: Automatic “You’re next” trigger (NEEDS UPDATE)**
+  - Task: When updateQueueStatusAction or reorderQueueAction is called, it must fetch the alert_threshold from the settings of the specific branch where the action occurred to determine if a notification should be sent.
+  - Files: `actions/db/queue-items-actions.ts`
 
 ## 12 – Unit & e2e Testing
+
 - [ ] **Step 12.1: Jest unit tests for server actions**
-  - **Task**: tests for queue actions & Twilio action (mocked).
-  - **Files**:  
-    - `tests/createQueueItemAction.test.ts`
-    - `tests/updateQueueStatusAction.test.ts`
-  - **Step Dependencies**: 2.3, 3.1
+  - Task: Update tests to mock user sessions with different roles and branch_ids to verify data is correctly scoped. Add tests for new management actions.
+  - Files: `tests/*`
 
 - [ ] **Step 12.2: Playwright e2e**
-  - **Task**: scenarios: Reception flow, Doctor flow, Alert triggered.
-  - **Files**:  
-    - `playwright.config.ts`
-    - `tests/e2e/*`
-  - **Step Dependencies**: 4.3, 5.2, 11.1
+  - Task: Create new e2e test suites for the hierarchical flows:
+    1. Super Admin Signup -> Create Branch -> Invite Branch Admin.
+    2. Branch Admin Login -> Invite Doctor/Receptionist.
+    3. Receptionist logs in, sees only their branch's queue.
+    4. Data isolation test: Ensure Receptionist A cannot see data from Receptionist B's branch.
+  - Files: `tests/e2e/*`
 
 ## 13 – Deployment Notes
-- [ ] **Step 13.1: Vercel & Supabase set‑up guide**
-  - **Task**: Markdown doc `DEPLOY.md` with env var list, Supabase SQL snippets, Twilio Sandbox config.
-  - **Files**:  
-    - `DEPLOY.md`
-  - **Step Dependencies**: all previous steps
+
+- [ ] **Step 13.1: Vercel & Supabase Set-up Guide (NEEDS UPDATE)**
+  - Task: Update DEPLOY.md to include instructions for setting up the new hierarchical database schema via migrations, configuring the Clerk webhook for populating user metadata, and setting email service environment variables.
+  - Files: `DEPLOY.md`
 
 ### Summary
 
