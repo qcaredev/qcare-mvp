@@ -2,25 +2,25 @@
  * @file consult-history-schema.ts
  *
  * @description
- *  Drizzle ORM table definition for **`consult_history`**.
- *  Each row captures timing metrics once a consultation finishes,
- *  enabling analytics without scanning the volatile `queue_items`.
+ * Drizzle ORM table definition for **`consult_history`**.
+ * Each row captures timing metrics once a consultation finishes at a branch,
+ * enabling analytics without scanning the volatile `queue_items`.
  *
  * @columns
- *  - queueItemId : FK to the source queue item (CASCADE on delete)
- *  - clinicId    : Tenant, duplicative for faster analytics queries
- *  - waitDurationSeconds
- *  - consultDurationSeconds
- *  - createdAt / updatedAt : Audit
+ * - queueItemId           : FK to the source queue item.
+ * - branchId              : Tenant, for faster analytics queries.
+ * - waitDurationSeconds   : Time from registration to consult start.
+ * - consultDurationSeconds: Time from consult start to completion.
+ * - createdAt             : Audit timestamp.
  *
  * @notes
- *  - We duplicate `clinicId` for composite indexing and because
- *    `queue_items` may be removed after 30 days retention.
+ * - We use `branchId` for composite indexing and because `queue_items`
+ * may have a different retention policy.
  */
+"use server"
 
 import { integer, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
-
-import { clinicsTable } from "./clinics-schema"
+import { branchesTable } from "./branches-schema"
 import { queueItemsTable } from "./queue-items-schema"
 
 export const consultHistoryTable = pgTable("consult_history", {
@@ -31,9 +31,9 @@ export const consultHistoryTable = pgTable("consult_history", {
     .references(() => queueItemsTable.id, { onDelete: "cascade" })
     .notNull(),
 
-  /** Tenant reference (duplicated for faster aggregation) */
-  clinicId: uuid("clinic_id")
-    .references(() => clinicsTable.id, { onDelete: "cascade" })
+  /** Tenant reference (for faster aggregation) */
+  branchId: uuid("branch_id")
+    .references(() => branchesTable.id, { onDelete: "cascade" })
     .notNull(),
 
   /** Time between registration and consult start, in seconds */
@@ -50,5 +50,7 @@ export const consultHistoryTable = pgTable("consult_history", {
     .$onUpdate(() => new Date())
 })
 
+/** Drizzle type for inserting consultation history */
 export type InsertConsultHistory = typeof consultHistoryTable.$inferInsert
+/** Drizzle type for selecting consultation history */
 export type SelectConsultHistory = typeof consultHistoryTable.$inferSelect

@@ -1698,91 +1698,155 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 - [X] **Step 0.2: Extend environment variables**
 
 ## 1 – Database Schema
-- [X] **Step 1.1: Define enums & tables**
-- [X] **Step 1.2: SQL for RLS & Realtime**
+- [X] **Step 1.1: Define Organization & Branch tables**
+ - **Task**: Create an organizations table. Create a branches table with a foreign key relationship to organizations (organization_id).
+ - **Files**: supabase/migrations/<..._create_orgs_and_branches.sql>
+ - [ ] **Step 1.2: Update User Profile & Roles**
+ - **Task**: The users or profiles table linked to Clerk users must be updated. It will now store organization_id, branch_id, and a role enum (super_admin, branch_admin, doctor, receptionist). This establishes each user's place in the hierarchy.
+ - **Files**: supabase/migrations/<..._update_users_table.sql>**
+ - [ ] **Step 1.3: Partition Application Data**
+ - **Task**: Add a mandatory branch_id foreign key to all branch-specific tables, including queue_items and a new branch_settings table (which replaces the old clinic_settings). This is critical for data isolation.
+ - **Files**: supabase/migrations/<..._partition_app_data.sql>
+ - [ ] **Step 1.4: Update RLS Policies for Hierarchy**
+ - **Task**: Rewrite all Row-Level Security (RLS) policies. Policies must now check the user's role and branch_id from their session claims to ensure they can only access data belonging to their assigned branch. Super Admins will have broader access based on their organization_id.
+ - **Files**: supabase/migrations/<..._update_rls_policies.sql>
+- [ ] **Step 1.5: SQL for RLS & Realtime**
+- [ ] **Step 1.6: Define enums & tables**
 
 ## 2 – Server Actions (Database)
-- [X] **Step 2.1: createQueueItemAction**
-- [X] **Step 2.2: reorderQueueAction**
-- [X] **Step 2.3: updateQueueStatusAction**
+- [X - NEEDS UPDATE] **Step 2.1: createQueueItemAction**
+  - **Task**: Action must now automatically associate the new queue item with the calling user's branch_id.
+  - **Files**: actions/db/queue-items-actions.ts
+  - [X - NEEDS UPDATE] **Step 2.2: reorderQueueAction**
+  - **Task**: All queries within this action must be scoped to the user's branch_id.
+  - **Files**: actions/db/queue-items-actions.ts
+  - [X - NEEDS UPDATE] **Step 2.3**: updateQueueStatusAction
+  - **Task**: All queries within this action must be scoped to the user's branch_id.
+  - **Files**: actions/db/queue-items-actions.ts
+- [ ] **Step 2.4: NEW - Org, Branch, & User Management Actions**
+- **Task**: Create new server actions for admins:
+  - createBranchAction (for Super Admins)
+  - inviteUserAction (for Super/Branch Admins, sends email)
+  - getUsersForBranchAction (for admin dashboards)
+  - updateUserRoleAction, deleteUserAction
+- **Files**: actions/db/management-actions.ts
 
 ## 3 – Server Actions (Twilio)
-- [X] **Step 3.1: sendWhatsAppMessageAction**
+- [X - NEEDS UPDATE] **Step 3.1: sendWhatsAppMessageAction**
+  - **Task**: Before sending a message, the action must fetch the notification settings (template, etc.) from the branch_settings table corresponding to the patient's branch_id.
+  - **Files**: actions/twilio-actions.ts
 
 ## 4 – Reception Dashboard
-- [X] **Step 4.1: Route & Server Page**
-- [X] **Step 4.2: Kanban Client Component**
-- [X] **Step 4.3: Queue Mutations Hooks**
+- [ ] **Step 4.1: Route & Server Page**
+  - **Task**: The page's data-fetching logic must be implicitly scoped to the logged-in receptionist's branch.
+  - **Files**: app/reception/page.tsx
+- [ ] **Step 4.2: Kanban Client Component**
+  - Note: No change to component logic, but data source is now filtered.
+- [ ] **Step 4.3: Queue Mutations Hooks**
+  - Note: No change to hooks, but server actions they call are now branch-aware.
 
 ## 5 – Doctor Dashboard
-- [X] **Step 5.1: Route & Server Page**
-- [X] **Step 5.2: Mini-Profile Dialog**
+- [ ] **Step 5.1: Route & Server Page**
+  - **Task**: The page must fetch and display only the patients assigned to the logged-in doctor within their specific branch.
+  - **Files**: app/doctor/page.tsx
+- [ ] **Step 5.2: Mini-Profile Dialog**
+  - **Note: No change.**
 
 ## 6 – Patient Public Page
-- [X] **Step 6.1: Route**
+- [ ] **Step 6.1: Route**
+  - **Task**: The public-facing patient status page needs to identify the branch, likely via the URL (e.g., /q/nims-bangalore/[patientId]). The backend will use the URL slug to query the correct branch's queue.
+  - **Files**: app/q/[branchSlug]/[patientId]/page.tsx
 
 ## 7 – Supabase Realtime Integration
-- [X] **Step 7.1: Realtime client util**
-- [X] **Step 7.2: Hook in dashboards**
+- [ ] **Step 7.1: Branch-Specific Realtime Channels**
+  - **Task**: Modify the Realtime client utility. Instead of subscribing to a generic channel like queue, it must subscribe to a dynamic, branch-specific channel, e.g., queue-changes-for-branch-BRN123. This is essential for security and to prevent data leakage between branches.
 
-## 8 – Admin & Analytics
-- [X] **Step 8.1: Analytics queries**
+  - **Files**: lib/supabase/realtime.ts
+
+- [ ] **Step 7.2: Hook in dashboards**
+  - **Task**: Update dashboard hooks to use the new branch-specific channels.
+
+## 8 - Signup & Onboarding Flow
+- [ ] **Step 8.1: Organization Signup Page**
+  - **Task: The "Get Started" button on the landing page will now lead to an Organization signup form. This flow creates the organization and the initial super_admin user.**
+  - **Files: app/sign-up/page.tsx**
+
+- [ ] **Step 8.2: User Invitation Acceptance Page**
+
+  - **Task**: Create a page for invited users (e.g., /accept-invite?token=...). Here, they set their password. On completion, their user record is fully activated with the pre-assigned role and branch. Clerk's invitation features can be used here.
+  - **Files**: app/accept-invite/page.tsx
+
+## 9 – Admin & Analytics
+- [ ] **Step 9.1: Analytics queries**
   - **Task**: `actions/db/analytics-actions.ts` – daily avg wait, CSV export.
   - **Files**:  
     - `actions/db/analytics-actions.ts`
   - **Step Dependencies**: 2.3
 
-- [X] **Step 8.2: Admin page**
+- [ ] **Step 9.2: Admin page**
   - **Task**: `app/admin/page.tsx` – charts with recharts, CSV download button.
   - **Files**:  
     - `app/admin/page.tsx`
   - **Step Dependencies**: 8.1
 
-## 9 – Settings Panel
-- [X] **Step 9.1: Clinic settings CRUD**
+- [ ] **Step 9.3: Branch Admin Dashboard**
+  - **Task**: The /admin route for a branch_admin will show analytics (Avg. Wait Time, etc.) and settings. All data queries for analytics and settings forms must be scoped to their branch_id.
+  - **Files**: app/admin/page.tsx, app/admin/_components/branch-settings-form.tsx, app/admin/_components/branch-user-management.tsx
+
+- [ ] **Step 9.4: Super Admin Dashboard**
+  - **Task**: A super_admin visiting /admin gets an enhanced view. This dashboard must include:
+    - A "Branch Management" panel to create/view branches.
+    - A "User Management" panel to invite/manage users across all branches.
+    - A "Branch Selector" dropdown to view the specific admin dashboard (analytics, settings) for any branch within their organization.
+  - **Files**: app/admin/_components/super-admin-view.tsx
+
+
+## 10 – Hierarchical Auth & Authorization
+- [ ] **Step 10.1: Role & ID Claims in JWT**
+  - **Task**: Configure Clerk to add organization_id, branch_id, and role to the user's publicMetadata upon signup/invitation. This data will be available in the session token for server-side and middleware validation.
+  - **Files**:  
+    - `/api/clerk-webhook (or similar serverless function to handle user creation events)`
+- [ ] **Step 10.2: Protected Route Middleware Update**
+  - **Task**: This is the most critical logic update. The middleware.ts must be rewritten to enforce the new rules:
+    - A receptionist can ONLY access /reception.
+    - A doctor can ONLY access /doctor.
+    - A branch_admin can access /reception, /doctor, and /admin.
+    - A super_admin has the same access as a branch admin (with expanded capabilities within the UI).
+    - Redirect any unauthorized access attempts.
+  - **Files**:  
+    - `middleware.ts`
+
+
+## 11 – Notifications Logic
+- [X - NEEDS UPDATE] **Step 11.1: Automatic “You’re next” trigger**
+  - **Task**: When updateQueueStatusAction or reorderQueueAction is called, it must fetch the alert_threshold from the settings of the specific branch where the action occurred to determine if a notification should be sent.
+  - **Files**:  
+    - `actions/db/queue-items-actions.ts`
+
+
+## 12 – Settings Panel
+- [ ] **Step 9.1: Clinic settings CRUD**
   - **Task**: Server actions + simple form to update alert threshold & language.
   - **Files**:  
     - `actions/db/clinic-settings-actions.ts`
     - `app/admin/_components/settings-form.tsx`
-  - **Step Dependencies**: 1.1, 8.2
 
-## 10 – Auth & Authorization Enhancements
-- [X] **Step 10.1: Role claims helper**
-  - **Task**: Add `lib/use-role.ts` (reads Clerk public metadata for role: staff, doctor, admin).
-  - **Files**:  
-    - `lib/use-role.ts`
-  - **Step Dependencies**: none (can run anytime before protected pages)
 
-- [ ] **Step 10.2: Protected route middleware update**
-  - **Task**: Extend `middleware.ts` to guard `/reception`, `/doctor`, `/admin` by role.
-  - **Files**:  
-    - `middleware.ts`
-  - **Step Dependencies**: 10.1
-
-## 11 – Notifications Logic
-- [ ] **Step 11.1: Automatic “You’re next” trigger**
-  - **Task**: In `updateQueueStatusAction` and `reorderQueueAction`, detect position ≤ threshold & call Twilio action.
-  - **Files**:  
-    - `actions/db/queue-items-actions.ts`
-  - **Step Dependencies**: 3.1
-
-## 12 – Unit & e2e Testing
-- [ ] **Step 12.1: Jest unit tests for server actions**
+## 13 – Unit & e2e Testing
+- [ ] **Step 13.1: Jest unit tests for server actions**
   - **Task**: tests for queue actions & Twilio action (mocked).
   - **Files**:  
     - `tests/createQueueItemAction.test.ts`
     - `tests/updateQueueStatusAction.test.ts`
-  - **Step Dependencies**: 2.3, 3.1
 
-- [ ] **Step 12.2: Playwright e2e**
+- [ ] **Step 13.2: Playwright e2e**
   - **Task**: scenarios: Reception flow, Doctor flow, Alert triggered.
   - **Files**:  
     - `playwright.config.ts`
     - `tests/e2e/*`
-  - **Step Dependencies**: 4.3, 5.2, 11.1
 
-## 13 – Deployment Notes
-- [ ] **Step 13.1: Vercel & Supabase set‑up guide**
+## 14 – Deployment Notes
+- [ ] **Step 12.1: Vercel & Supabase set‑up guide**
   - **Task**: Markdown doc `DEPLOY.md` with env var list, Supabase SQL snippets, Twilio Sandbox config.
   - **Files**:  
     - `DEPLOY.md`
@@ -2334,24 +2398,6 @@ Contains the ESLint configuration for the app.
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/types/server-action-types.ts
-/*
-Contains the general server action types.
-*/
-
-export type ActionState<T> =
-  | { isSuccess: true; message: string; data: T }
-  | { isSuccess: false; message: string; data?: never }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/types/index.ts
-/*
-Exports the types for the app.
-*/
-
-export * from "./server-action-types"
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/actions/twilio-actions.ts
 /**
  * @file twilio-actions.ts
@@ -2615,6 +2661,24 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // Create and export the client-side Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/types/server-action-types.ts
+/*
+Contains the general server action types.
+*/
+
+export type ActionState<T> =
+  | { isSuccess: true; message: string; data: T }
+  | { isSuccess: false; message: string; data?: never }
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/types/index.ts
+/*
+Exports the types for the app.
+*/
+
+export * from "./server-action-types"
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/app/layout.tsx
@@ -3632,12 +3696,15 @@ File: /Users/dev/Desktop/project/qcare-mvp/actions/db/queue_items_actions.ts
  * Server actions for managing the `queue_items` table. This includes operations
  * such as creating, reordering, and updating the status of queue items. These
  * actions encapsulate the database logic and are designed to be securely called
- * from client components.
+ * from client components. This file now also includes logic to trigger proximity
+ * alerts via WhatsApp.
  *
- * @see
- * - Drizzle ORM (`drizzle-orm`) for database queries.
- * - `db/schema/queue-items-schema.ts` for table and type definitions.
- * - `types/server-action-types.ts` for the `ActionState` return type.
+ * @dependencies
+ * - `drizzle-orm`: For database queries.
+ * - `db/schema/queue-items-schema.ts`: For table and type definitions.
+ * - `types/server-action-types.ts`: For the `ActionState` return type.
+ * - `actions/twilio-actions.ts`: For sending WhatsApp messages.
+ * - `actions/db/clinic-settings-actions.ts`: For retrieving alert thresholds.
  */
 "use server"
 
@@ -3654,6 +3721,8 @@ import { and, asc, desc, eq, gte, sql } from "drizzle-orm"
 import { startOfDay } from "date-fns"
 import { revalidatePath } from "next/cache"
 import { createConsultHistoryAction } from "./consult_history_actions"
+import { getClinicSettingsAction } from "./clinic-settings-actions"
+import { sendWhatsAppMessageAction } from "@/actions/twilio-actions"
 
 /**
  * The input type for creating a new queue item, omitting fields that are
@@ -3671,6 +3740,98 @@ type CreateQueueItemInput = Omit<
 interface ReorderQueueItem {
   id: string
   position: number
+}
+
+/**
+ * A union type for the Drizzle client, allowing helper functions to be used
+ * either standalone or within a transaction.
+ */
+type DbOrTxClient =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// =================================================================================
+// H E L P E R S
+// =================================================================================
+
+/**
+ * @function checkAndSendProximityAlerts
+ * @description Checks the waitlist for a given clinic and sends "You're next" or
+ * "You are N spots away" WhatsApp notifications to patients who have reached the
+ * configured alert threshold. This function is designed to be called within a
+ * transaction after queue positions have changed.
+ *
+ * @param {string} clinicId - The ID of the clinic to check.
+ * @param {DbOrTxClient} tx - The Drizzle transaction client.
+ *
+ * @notes
+ * - This function does not return a value and swallows its own errors to prevent
+ * failing the parent database transaction. It logs errors internally.
+ * - It fetches the `alertThreshold` from `clinicSettingsTable`.
+ * - For MVP, this function does not track if a notification has already been
+ * sent for a specific position. This means a user might receive the same
+ * alert multiple times. A future improvement would be to add a `lastNotifiedPosition`
+ * column to the `queue_items` table to prevent this.
+ */
+async function checkAndSendProximityAlerts(
+  clinicId: string,
+  tx: DbOrTxClient
+) {
+  try {
+    // 1. Get clinic-specific alert settings
+    const settingsResult = await getClinicSettingsAction(clinicId, tx)
+    if (!settingsResult.isSuccess || !settingsResult.data) {
+      console.error(
+        `Could not retrieve settings for clinic ${clinicId}. Alerts will not be sent.`
+      )
+      return
+    }
+    const { alertThreshold } = settingsResult.data
+
+    // 2. Get the current waitlist, up to the alert threshold
+    const waitlist = await tx.query.queueItems.findMany({
+      where: and(
+        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.status, "WAITLIST")
+      ),
+      orderBy: [asc(queueItemsTable.position)],
+      limit: alertThreshold // Only fetch patients within the alert range
+    })
+
+    // 3. Iterate and send alerts
+    for (const patient of waitlist) {
+      if (!patient.phone) {
+        continue // Cannot notify without a phone number
+      }
+
+      const position = patient.position + 1 // Display as 1-based index
+
+      // Check if patient is within the notification threshold
+      if (position <= alertThreshold) {
+        let messageBody = ""
+        if (position === 1) {
+          messageBody = "You are next – please check in at reception."
+        } else {
+          messageBody = `Your turn is near! You are now #${position} in the queue.`
+        }
+
+        // Asynchronously send the message; do not block the transaction.
+        // If this fails, it will be logged but will not cause a rollback.
+        sendWhatsAppMessageAction({
+          to: patient.phone,
+          body: messageBody
+        }).then(result => {
+          if (!result.isSuccess) {
+            console.error(
+              `Failed to send proximity alert to ${patient.phone}: ${result.message}`
+            )
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error("Error during proximity alert check:", error)
+  }
 }
 
 // =================================================================================
@@ -3816,7 +3977,7 @@ export async function getQueueItemsByClinicAction(
 
     const items = await db.query.queueItems.findMany({
       where: and(
-        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.clinicId, clinicId)
         // gte(queueItemsTable.createdAt, todayStart)
       ),
       orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)]
@@ -3875,6 +4036,10 @@ export async function reorderQueueAction(
 ): Promise<ActionState<void>> {
   try {
     await db.transaction(async tx => {
+      if (items.length === 0) {
+        return // No items to reorder, exit transaction.
+      }
+
       const updatePromises = items.map(item =>
         tx
           .update(queueItemsTable)
@@ -3882,6 +4047,19 @@ export async function reorderQueueAction(
           .where(eq(queueItemsTable.id, item.id))
       )
       await Promise.all(updatePromises)
+
+      // To check for alerts, we need the clinicId. We can get it from any
+      // of the items being moved.
+      const [firstItem] = await tx
+        .select({ clinicId: queueItemsTable.clinicId })
+        .from(queueItemsTable)
+        .where(eq(queueItemsTable.id, items[0].id))
+        .limit(1)
+
+      // If the item exists, trigger the proximity alert check.
+      if (firstItem && firstItem.clinicId) {
+        await checkAndSendProximityAlerts(firstItem.clinicId, tx)
+      }
     })
 
     revalidatePath("/reception")
@@ -3955,6 +4133,15 @@ export async function updateQueueStatusAction(
         .where(eq(queueItemsTable.id, queueItemId))
         .returning()
 
+      // Trigger alerts if a patient's removal affects the waitlist.
+      if (
+        (newStatus === "COMPLETE" || newStatus === "CANCELLED") &&
+        currentItem.status !== "COMPLETE" &&
+        currentItem.status !== "CANCELLED"
+      ) {
+        await checkAndSendProximityAlerts(currentItem.clinicId, tx)
+      }
+
       return updated
     })
 
@@ -3981,6 +4168,7 @@ export async function updateQueueStatusAction(
     }
   }
 }
+
 
 File: /Users/dev/Desktop/project/qcare-mvp/actions/db/analytics-actions.ts
 /**
@@ -5046,7 +5234,6 @@ export default function PatientQueueView({
 }
 
 </file_contents>
-
 
 </existing_code>
 

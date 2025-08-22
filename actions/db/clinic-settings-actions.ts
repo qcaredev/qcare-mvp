@@ -2,83 +2,65 @@
  * @file clinic-settings-actions.ts
  *
  * @description
- * Server actions for creating, reading, and updating records in the
- * `clinic_settings` table. These actions provide a secure interface
- * for the admin settings form to interact with the database.
+ * Server actions for managing the `clinic_settings` table. This includes
+ * operations for creating, reading, and updating clinic-specific settings, such
+ * as notification thresholds and language preferences.
+ *
+ * @dependencies
+ * - `db/db.ts`: The Drizzle ORM client.
+ * - `db/schema/clinic-settings-schema.ts`: For table and type definitions.
+ * - `types/server-action-types.ts`: For the `ActionState` return type.
  */
 "use server"
 
 import { db } from "@/db/db"
-import {
-  clinicSettingsTable,
-  InsertClinicSettings,
-  SelectClinicSettings
-} from "@/db/schema"
+import { clinicSettingsTable, SelectClinicSettings } from "@/db/schema"
 import { ActionState } from "@/types"
 import { eq } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
+
+/**
+ * A union type for the Drizzle client, allowing a function to be used
+ * either standalone with the global `db` object or within a parent
+ * transaction by accepting the `tx` client.
+ */
+type DbOrTxClient =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 /**
  * @function getClinicSettingsAction
- * @description Retrieves the settings for a specific clinic.
+ * @description Retrieves the settings for a specific clinic. If no settings row
+ * exists for the clinic, it returns null, allowing the caller to use default values.
  *
- * @param {string} clinicId - The UUID of the clinic.
- * @returns {Promise<ActionState<SelectClinicSettings | null>>} The settings object, or null if none exists.
+ * @param {string} clinicId - The UUID of the clinic whose settings are being requested.
+ * @param {DbOrTxClient} [tx] - (Optional) A Drizzle transaction client. If provided,
+ * the query will be executed within that transaction.
+ *
+ * @returns {Promise<ActionState<SelectClinicSettings | null>>} An `ActionState` object.
+ * - On success: `data` contains the clinic settings object or `null` if not found.
+ * - On failure: `isSuccess` is false, and `message` contains the error details.
  */
 export async function getClinicSettingsAction(
-  clinicId: string
+  clinicId: string,
+  tx?: DbOrTxClient
 ): Promise<ActionState<SelectClinicSettings | null>> {
   try {
-    const settings = await db.query.clinicSettings.findFirst({
+    const dbClient = tx || db
+
+    const settings = await dbClient.query.clinicSettings.findFirst({
       where: eq(clinicSettingsTable.clinicId, clinicId)
     })
+
     return {
       isSuccess: true,
-      message: "Settings retrieved.",
+      message: "Clinic settings retrieved successfully.",
       data: settings || null
     }
   } catch (error) {
-    console.error("Error getting clinic settings:", error)
-    return { isSuccess: false, message: "Failed to retrieve settings." }
-  }
-}
-
-/**
- * @function updateClinicSettingsAction
- * @description Creates or updates the settings for a specific clinic (upsert).
- * This function uses Drizzle's `.onConflictDoUpdate()` to atomically update
- * the record if it exists, or insert it if it does not.
- *
- * @param {InsertClinicSettings} settings - The settings data to save.
- * @returns {Promise<ActionState<SelectClinicSettings>>} The updated settings object.
- */
-export async function updateClinicSettingsAction(
-  settings: InsertClinicSettings
-): Promise<ActionState<SelectClinicSettings>> {
-  try {
-    const [updatedSettings] = await db
-      .insert(clinicSettingsTable)
-      .values(settings)
-      .onConflictDoUpdate({
-        target: clinicSettingsTable.clinicId, // The column with the unique constraint
-        set: {
-          alertThreshold: settings.alertThreshold,
-          defaultLanguage: settings.defaultLanguage,
-          whatsappTemplateId: settings.whatsappTemplateId
-        }
-      })
-      .returning()
-
-    // Revalidate the admin path to ensure the UI shows the updated settings
-    revalidatePath("/admin")
-
+    console.error("Error retrieving clinic settings:", error)
     return {
-      isSuccess: true,
-      message: "Settings updated successfully.",
-      data: updatedSettings
+      isSuccess: false,
+      message: "Failed to retrieve clinic settings."
     }
-  } catch (error) {
-    console.error("Error updating clinic settings:", error)
-    return { isSuccess: false, message: "Failed to update settings." }
   }
 }

@@ -10,8 +10,8 @@
  */
 
 import {
-  clinicsTable,
-  clinicSettingsTable,
+  branchesTable,
+  branchSettingsTable,
   consultHistoryTable,
   profilesTable,
   queueItemsTable
@@ -29,10 +29,10 @@ config({ path: ".env.local" })
  */
 const schema = {
   profiles: profilesTable,
-  clinics: clinicsTable,
+  clinics: branchesTable,
   queueItems: queueItemsTable,
   consultHistory: consultHistoryTable,
-  clinicSettings: clinicSettingsTable
+  clinicSettings: branchSettingsTable
 } as const
 
 /**

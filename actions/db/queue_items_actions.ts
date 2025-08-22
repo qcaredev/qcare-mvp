@@ -5,12 +5,15 @@
  * Server actions for managing the `queue_items` table. This includes operations
  * such as creating, reordering, and updating the status of queue items. These
  * actions encapsulate the database logic and are designed to be securely called
- * from client components.
+ * from client components. This file now also includes logic to trigger proximity
+ * alerts via WhatsApp.
  *
- * @see
- * - Drizzle ORM (`drizzle-orm`) for database queries.
- * - `db/schema/queue-items-schema.ts` for table and type definitions.
- * - `types/server-action-types.ts` for the `ActionState` return type.
+ * @dependencies
+ * - `drizzle-orm`: For database queries.
+ * - `db/schema/queue-items-schema.ts`: For table and type definitions.
+ * - `types/server-action-types.ts`: For the `ActionState` return type.
+ * - `actions/twilio-actions.ts`: For sending WhatsApp messages.
+ * - `actions/db/clinic-settings-actions.ts`: For retrieving alert thresholds.
  */
 "use server"
 
@@ -27,6 +30,8 @@ import { and, asc, desc, eq, gte, sql } from "drizzle-orm"
 import { startOfDay } from "date-fns"
 import { revalidatePath } from "next/cache"
 import { createConsultHistoryAction } from "./consult_history_actions"
+import { getClinicSettingsAction } from "./clinic-settings-actions"
+import { sendWhatsAppMessageAction } from "@/actions/twilio-actions"
 
 /**
  * The input type for creating a new queue item, omitting fields that are
@@ -44,6 +49,98 @@ type CreateQueueItemInput = Omit<
 interface ReorderQueueItem {
   id: string
   position: number
+}
+
+/**
+ * A union type for the Drizzle client, allowing helper functions to be used
+ * either standalone or within a transaction.
+ */
+type DbOrTxClient =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// =================================================================================
+// H E L P E R S
+// =================================================================================
+
+/**
+ * @function checkAndSendProximityAlerts
+ * @description Checks the waitlist for a given clinic and sends "You're next" or
+ * "You are N spots away" WhatsApp notifications to patients who have reached the
+ * configured alert threshold. This function is designed to be called within a
+ * transaction after queue positions have changed.
+ *
+ * @param {string} clinicId - The ID of the clinic to check.
+ * @param {DbOrTxClient} tx - The Drizzle transaction client.
+ *
+ * @notes
+ * - This function does not return a value and swallows its own errors to prevent
+ * failing the parent database transaction. It logs errors internally.
+ * - It fetches the `alertThreshold` from `clinicSettingsTable`.
+ * - For MVP, this function does not track if a notification has already been
+ * sent for a specific position. This means a user might receive the same
+ * alert multiple times. A future improvement would be to add a `lastNotifiedPosition`
+ * column to the `queue_items` table to prevent this.
+ */
+async function checkAndSendProximityAlerts(
+  clinicId: string,
+  tx: DbOrTxClient
+) {
+  try {
+    // 1. Get clinic-specific alert settings
+    const settingsResult = await getClinicSettingsAction(clinicId, tx)
+    if (!settingsResult.isSuccess || !settingsResult.data) {
+      console.error(
+        `Could not retrieve settings for clinic ${clinicId}. Alerts will not be sent.`
+      )
+      return
+    }
+    const { alertThreshold } = settingsResult.data
+
+    // 2. Get the current waitlist, up to the alert threshold
+    const waitlist = await tx.query.queueItems.findMany({
+      where: and(
+        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.status, "WAITLIST")
+      ),
+      orderBy: [asc(queueItemsTable.position)],
+      limit: alertThreshold // Only fetch patients within the alert range
+    })
+
+    // 3. Iterate and send alerts
+    for (const patient of waitlist) {
+      if (!patient.phone) {
+        continue // Cannot notify without a phone number
+      }
+
+      const position = patient.position + 1 // Display as 1-based index
+
+      // Check if patient is within the notification threshold
+      if (position <= alertThreshold) {
+        let messageBody = ""
+        if (position === 1) {
+          messageBody = "You are next – please check in at reception."
+        } else {
+          messageBody = `Your turn is near! You are now #${position} in the queue.`
+        }
+
+        // Asynchronously send the message; do not block the transaction.
+        // If this fails, it will be logged but will not cause a rollback.
+        sendWhatsAppMessageAction({
+          to: patient.phone,
+          body: messageBody
+        }).then(result => {
+          if (!result.isSuccess) {
+            console.error(
+              `Failed to send proximity alert to ${patient.phone}: ${result.message}`
+            )
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error("Error during proximity alert check:", error)
+  }
 }
 
 // =================================================================================
@@ -189,7 +286,7 @@ export async function getQueueItemsByClinicAction(
 
     const items = await db.query.queueItems.findMany({
       where: and(
-        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.clinicId, clinicId)
         // gte(queueItemsTable.createdAt, todayStart)
       ),
       orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)]
@@ -248,6 +345,10 @@ export async function reorderQueueAction(
 ): Promise<ActionState<void>> {
   try {
     await db.transaction(async tx => {
+      if (items.length === 0) {
+        return // No items to reorder, exit transaction.
+      }
+
       const updatePromises = items.map(item =>
         tx
           .update(queueItemsTable)
@@ -255,6 +356,19 @@ export async function reorderQueueAction(
           .where(eq(queueItemsTable.id, item.id))
       )
       await Promise.all(updatePromises)
+
+      // To check for alerts, we need the clinicId. We can get it from any
+      // of the items being moved.
+      const [firstItem] = await tx
+        .select({ clinicId: queueItemsTable.clinicId })
+        .from(queueItemsTable)
+        .where(eq(queueItemsTable.id, items[0].id))
+        .limit(1)
+
+      // If the item exists, trigger the proximity alert check.
+      if (firstItem && firstItem.clinicId) {
+        await checkAndSendProximityAlerts(firstItem.clinicId, tx)
+      }
     })
 
     revalidatePath("/reception")
@@ -327,6 +441,15 @@ export async function updateQueueStatusAction(
         .set({ status: newStatus, position: newPosition })
         .where(eq(queueItemsTable.id, queueItemId))
         .returning()
+
+      // Trigger alerts if a patient's removal affects the waitlist.
+      if (
+        (newStatus === "COMPLETE" || newStatus === "CANCELLED") &&
+        currentItem.status !== "COMPLETE" &&
+        currentItem.status !== "CANCELLED"
+      ) {
+        await checkAndSendProximityAlerts(currentItem.clinicId, tx)
+      }
 
       return updated
     })

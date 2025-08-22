@@ -2,28 +2,22 @@
  * @file queue-items-schema.ts
  *
  * @description
- *  Drizzle ORM table definition for **`queue_items`**. Each row represents
- *  a patient currently (or previously) in an OPD queue.
- *
- *  The table supports real‑time updates via Supabase Realtime, so we set
- *  `replica identity full` in Step 1.2 SQL instructions.
+ * Drizzle ORM table definition for **`queue_items`**. Each row represents
+ * a patient currently (or previously) in an OPD queue for a specific branch.
  *
  * @columns
- *  - id, clinicId              : Identification & tenancy
- *  - patientName, phone        : Patient contact details
- *  - reason                    : Reason for visit / chief complaint
- *  - status (enum)             : WAITLIST | SERVING | COMPLETE | CANCELLED
- *  - position                  : Integer ordering within WAITLIST
- *  - doctorId                  : Optional textual identifier for doctor
- *  - createdAt / updatedAt     : Audit timestamps
+ * - id, branchId            : Identification & tenancy.
+ * - patientName, phone      : Patient contact details.
+ * - reason                  : Reason for visit / chief complaint.
+ * - status (enum)           : WAITLIST | SERVING | COMPLETE | CANCELLED.
+ * - position                : Integer ordering within WAITLIST.
+ * - doctorId                : Optional textual identifier for doctor.
+ * - createdAt / updatedAt   : Audit timestamps.
  *
  * @relations
- *  - FK clinicId ➔ clinics.id   (ON DELETE CASCADE)
- *
- * @business‑rules
- *  - `position` is only meaningful when `status = WAITLIST`.
- *  - `phone` is optional because some walk‑ins may not provide a number.
+ * - FK branchId ➔ branches.id (ON DELETE CASCADE)
  */
+"use server"
 
 import {
   integer,
@@ -33,8 +27,7 @@ import {
   timestamp,
   uuid
 } from "drizzle-orm/pg-core"
-
-import { clinicsTable } from "./clinics-schema"
+import { branchesTable } from "./branches-schema"
 
 /** Status enumeration as per functional spec */
 export const queueStatusEnum = pgEnum("queue_status", [
@@ -47,12 +40,12 @@ export const queueStatusEnum = pgEnum("queue_status", [
 export const queueItemsTable = pgTable("queue_items", {
   id: uuid("id").defaultRandom().primaryKey(),
 
-  /** Tenant reference — cascades on clinic deletion */
-  clinicId: uuid("clinic_id")
-    .references(() => clinicsTable.id, { onDelete: "cascade" })
+  /** Tenant reference — cascades on branch deletion */
+  branchId: uuid("branch_id")
+    .references(() => branchesTable.id, { onDelete: "cascade" })
     .notNull(),
 
-  /** Patient‑facing fields */
+  /** Patient-facing fields */
   patientName: text("patient_name").notNull(),
   phone: text("phone"), // Optional
 
@@ -65,7 +58,7 @@ export const queueItemsTable = pgTable("queue_items", {
   /**
    * Display ordering inside WAITLIST.
    * IMPORTANT: Managed exclusively by server actions that enforce a dense
-   * ranking (0‑n without gaps) to simplify “position” math.
+   * ranking (0-n without gaps) to simplify “position” math.
    */
   position: integer("position").notNull().default(0),
 
@@ -83,7 +76,7 @@ export const queueItemsTable = pgTable("queue_items", {
     .$onUpdate(() => new Date())
 })
 
-/** Insert type for `queueItemsTable` */
+/** Drizzle type for inserting a queue item */
 export type InsertQueueItem = typeof queueItemsTable.$inferInsert
-/** Select type for `queueItemsTable` */
+/** Drizzle type for selecting a queue item */
 export type SelectQueueItem = typeof queueItemsTable.$inferSelect
