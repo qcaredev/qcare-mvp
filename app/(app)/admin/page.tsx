@@ -8,7 +8,7 @@
 "use server"
 
 import { getDailyAverageWaitTimesAction } from "@/actions/db/analytics-actions"
-import { getClinicSettingsAction } from "@/actions/db/branch-settings-actions"
+import { getBranchSettingsAction } from "@/actions/db/branch-settings-actions"
 import { Suspense } from "react"
 import { AdminDashboardClient } from "./_components/admin-dashboard-client"
 
@@ -48,7 +48,7 @@ async function AdminDataFetcher() {
   // Fetch analytics and settings data in parallel for efficiency
   const [avgTimesResult, settingsResult] = await Promise.all([
     getDailyAverageWaitTimesAction(MOCK_CLINIC_ID),
-    getClinicSettingsAction(MOCK_CLINIC_ID)
+    getBranchSettingsAction(MOCK_CLINIC_ID)
   ])
 
   if (!avgTimesResult.isSuccess || !settingsResult.isSuccess) {

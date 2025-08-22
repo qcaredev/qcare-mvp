@@ -2,17 +2,19 @@
  * @file db.ts
  *
  * @description
- *  Centralised Drizzle ORM client initialisation for Postgres, including a
- *  schema map so Drizzle can infer strongly‑typed query helpers.
+ * Centralised Drizzle ORM client initialisation for Postgres, including a
+ * schema map so Drizzle can infer strongly-typed query helpers.
  *
- *  ❗️Migrations are **not** generated here—follow the user instructions
- *  below to run `drizzle-kit`.
+ * @notes
+ * - Migrations are NOT generated here. Follow user instructions to run `drizzle-kit`.
  */
+"use server"
 
 import {
   branchesTable,
   branchSettingsTable,
   consultHistoryTable,
+  organizationsTable,
   profilesTable,
   queueItemsTable
 } from "@/db/schema"
@@ -24,15 +26,16 @@ config({ path: ".env.local" })
 
 /**
  * The schema object must include every pgTable we intend to query through
- * `db.query.<table>` helpers.  Add new tables here whenever you create a
+ * `db.query.<table>` helpers. Add new tables here whenever you create a
  * new schema file.
  */
 const schema = {
   profiles: profilesTable,
-  clinics: branchesTable,
+  organizations: organizationsTable,
+  branches: branchesTable, // Corrected key
   queueItems: queueItemsTable,
   consultHistory: consultHistoryTable,
-  clinicSettings: branchSettingsTable
+  branchSettings: branchSettingsTable // Corrected key
 } as const
 
 /**

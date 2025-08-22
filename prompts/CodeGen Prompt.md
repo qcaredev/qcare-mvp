@@ -1744,6 +1744,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
   - Note: No change to component logic, but data source is now filtered.
 - [ ] **Step 4.3: Queue Mutations Hooks**
   - Note: No change to hooks, but server actions they call are now branch-aware.
+- [ ] **Step 4.4: Build Kanban board**
 
 ## 5 – Doctor Dashboard
 - [ ] **Step 5.1: Route & Server Page**
