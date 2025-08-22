@@ -17,7 +17,7 @@
  * @relations
  * - FK branchId ➔ branches.id (ON DELETE CASCADE)
  */
-"use server"
+// "use server"
 
 import {
   integer,

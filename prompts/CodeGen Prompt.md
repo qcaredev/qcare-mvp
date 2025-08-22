@@ -1701,26 +1701,26 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 - [X] **Step 1.1: Define Organization & Branch tables**
  - **Task**: Create an organizations table. Create a branches table with a foreign key relationship to organizations (organization_id).
  - **Files**: supabase/migrations/<..._create_orgs_and_branches.sql>
- - [ ] **Step 1.2: Update User Profile & Roles**
+ - [x] **Step 1.2: Update User Profile & Roles**
  - **Task**: The users or profiles table linked to Clerk users must be updated. It will now store organization_id, branch_id, and a role enum (super_admin, branch_admin, doctor, receptionist). This establishes each user's place in the hierarchy.
  - **Files**: supabase/migrations/<..._update_users_table.sql>**
  - [ ] **Step 1.3: Partition Application Data**
  - **Task**: Add a mandatory branch_id foreign key to all branch-specific tables, including queue_items and a new branch_settings table (which replaces the old clinic_settings). This is critical for data isolation.
  - **Files**: supabase/migrations/<..._partition_app_data.sql>
- - [ ] **Step 1.4: Update RLS Policies for Hierarchy**
+ - [X] **Step 1.4: Update RLS Policies for Hierarchy**
  - **Task**: Rewrite all Row-Level Security (RLS) policies. Policies must now check the user's role and branch_id from their session claims to ensure they can only access data belonging to their assigned branch. Super Admins will have broader access based on their organization_id.
  - **Files**: supabase/migrations/<..._update_rls_policies.sql>
 - [ ] **Step 1.5: SQL for RLS & Realtime**
 - [ ] **Step 1.6: Define enums & tables**
 
 ## 2 – Server Actions (Database)
-- [X - NEEDS UPDATE] **Step 2.1: createQueueItemAction**
+- [X] **Step 2.1: createQueueItemAction**
   - **Task**: Action must now automatically associate the new queue item with the calling user's branch_id.
   - **Files**: actions/db/queue-items-actions.ts
-  - [X - NEEDS UPDATE] **Step 2.2: reorderQueueAction**
+  - [X] **Step 2.2: reorderQueueAction**
   - **Task**: All queries within this action must be scoped to the user's branch_id.
   - **Files**: actions/db/queue-items-actions.ts
-  - [X - NEEDS UPDATE] **Step 2.3**: updateQueueStatusAction
+  - [X] **Step 2.3**: updateQueueStatusAction
   - **Task**: All queries within this action must be scoped to the user's branch_id.
   - **Files**: actions/db/queue-items-actions.ts
 - [ ] **Step 2.4: NEW - Org, Branch, & User Management Actions**
@@ -1732,15 +1732,15 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 - **Files**: actions/db/management-actions.ts
 
 ## 3 – Server Actions (Twilio)
-- [X - NEEDS UPDATE] **Step 3.1: sendWhatsAppMessageAction**
+- [X] **Step 3.1: sendWhatsAppMessageAction**
   - **Task**: Before sending a message, the action must fetch the notification settings (template, etc.) from the branch_settings table corresponding to the patient's branch_id.
   - **Files**: actions/twilio-actions.ts
 
 ## 4 – Reception Dashboard
-- [ ] **Step 4.1: Route & Server Page**
+- [X] **Step 4.1: Route & Server Page**
   - **Task**: The page's data-fetching logic must be implicitly scoped to the logged-in receptionist's branch.
   - **Files**: app/reception/page.tsx
-- [ ] **Step 4.2: Kanban Client Component**
+- [X] **Step 4.2: Kanban Client Component**
   - Note: No change to component logic, but data source is now filtered.
 - [ ] **Step 4.3: Queue Mutations Hooks**
   - Note: No change to hooks, but server actions they call are now branch-aware.
@@ -1818,7 +1818,7 @@ USING (auth.uid()::text = (storage.foldername(name))[1]);
 
 
 ## 11 – Notifications Logic
-- [X - NEEDS UPDATE] **Step 11.1: Automatic “You’re next” trigger**
+- [X] **Step 11.1: Automatic “You’re next” trigger**
   - **Task**: When updateQueueStatusAction or reorderQueueAction is called, it must fetch the alert_threshold from the settings of the specific branch where the action occurred to determine if a notification should be sent.
   - **Files**:  
     - `actions/db/queue-items-actions.ts`
@@ -2396,24 +2396,6 @@ Contains the ESLint configuration for the app.
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/types/server-action-types.ts
-/*
-Contains the general server action types.
-*/
-
-export type ActionState<T> =
-  | { isSuccess: true; message: string; data: T }
-  | { isSuccess: false; message: string; data?: never }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/types/index.ts
-/*
-Exports the types for the app.
-*/
-
-export * from "./server-action-types"
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/actions/twilio-actions.ts
 /**
  * @file twilio-actions.ts
@@ -2621,6 +2603,24 @@ export const manageSubscriptionStatusChange = async (
       : new Error("Failed to update subscription status")
   }
 }
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/types/server-action-types.ts
+/*
+Contains the general server action types.
+*/
+
+export type ActionState<T> =
+  | { isSuccess: true; message: string; data: T }
+  | { isSuccess: false; message: string; data?: never }
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/types/index.ts
+/*
+Exports the types for the app.
+*/
+
+export * from "./server-action-types"
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/lib/stripe.ts
@@ -3452,238 +3452,92 @@ export default function HeroVideoDialog({
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
 /*
-Hook to check if the user is on a mobile device.
+This server component provides a tailwind indicator for the app in dev mode.
 */
 
-import * as React from "react"
+"use server"
 
-const MOBILE_BREAKPOINT = 768
+export async function TailwindIndicator() {
+  // Don't show in production
+  if (process.env.NODE_ENV === "production") return null
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return !!isMobile
+  return (
+    <div className="fixed bottom-12 left-3 z-50 flex size-6 items-center justify-center rounded-full bg-gray-800 p-3 font-mono text-xs text-white">
+      <div className="block sm:hidden">xs</div>
+      <div className="hidden sm:block md:hidden">sm</div>
+      <div className="hidden md:block lg:hidden">md</div>
+      <div className="hidden lg:block xl:hidden">lg</div>
+      <div className="hidden xl:block 2xl:hidden">xl</div>
+      <div className="hidden 2xl:block">2xl</div>
+    </div>
+  )
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/theme-switcher.tsx
 /*
-Hook for copying text to the clipboard.
-*/
-
-"use client"
-
-import { useState } from "react"
-
-export interface useCopyToClipboardProps {
-  timeout?: number
-}
-
-export function useCopyToClipboard({
-  timeout = 2000
-}: useCopyToClipboardProps) {
-  const [isCopied, setIsCopied] = useState<Boolean>(false)
-
-  const copyToClipboard = (value: string) => {
-    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
-      return
-    }
-
-    if (!value) {
-      return
-    }
-
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true)
-
-      setTimeout(() => {
-        setIsCopied(false)
-      }, timeout)
-    })
-  }
-
-  return { isCopied, copyToClipboard }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
-/*
-Hook to display toast notifications.
+This client component provides a theme switcher for the app.
 */
 
 "use client"
 
-// Inspired by react-hot-toast library
-import * as React from "react"
+import { cn } from "@/lib/utils"
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+import { HTMLAttributes, ReactNode } from "react"
 
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
-type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
+interface ThemeSwitcherProps extends HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode
 }
 
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST"
-} as const
+export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
+  const { setTheme, theme } = useTheme()
 
-let count = 0
-
-function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
-}
-
-type ActionType = typeof actionTypes
-
-type Action =
-  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
-  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
-  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
-  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
-
-interface State {
-  toasts: ToasterToast[]
-}
-
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
+  const handleChange = (theme: "dark" | "light") => {
+    localStorage.setItem("theme", theme)
+    setTheme(theme)
   }
 
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
-  }, TOAST_REMOVE_DELAY)
-
-  toastTimeouts.set(toastId, timeout)
+  return (
+    <div
+      className={cn(
+        "p-1 hover:cursor-pointer hover:opacity-50",
+        props.className
+      )}
+      onClick={() => handleChange(theme === "light" ? "dark" : "light")}
+    >
+      {theme === "dark" ? (
+        <Moon className="size-6" />
+      ) : (
+        <Sun className="size-6" />
+      )}
+    </div>
+  )
 }
 
-export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
-      }
 
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        )
-      }
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/providers.tsx
+/*
+This client component provides the providers for the app.
+*/
 
-    case "DISMISS_TOAST": {
-      const { toastId } = action
+"use client"
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach(toast => {
-          addToRemoveQueue(toast.id)
-        })
-      }
+import { TooltipProvider } from "@/components/ui/tooltip"
+import {
+  ThemeProvider as NextThemesProvider,
+  ThemeProviderProps
+} from "next-themes"
 
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
-        )
-      }
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return { ...state, toasts: [] }
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter(t => t.id !== action.toastId)
-      }
-  }
+export const Providers = ({ children, ...props }: ThemeProviderProps) => {
+  return (
+    <NextThemesProvider {...props}>
+      <TooltipProvider>{children}</TooltipProvider>
+    </NextThemesProvider>
+  )
 }
-
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach(listener => {
-    listener(memoryState)
-  })
-}
-
-type Toast = Omit<ToasterToast, "id">
-
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: open => {
-        if (!open) dismiss()
-      }
-    }
-  })
-
-  return { id: id, dismiss, update }
-}
-
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
-
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [state])
-
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
-  }
-}
-
-export { toast, useToast }
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/actions/db/queue_items_actions.ts
@@ -3702,7 +3556,7 @@ File: /Users/dev/Desktop/project/qcare-mvp/actions/db/queue_items_actions.ts
  * - `db/schema/queue-items-schema.ts`: For table and type definitions.
  * - `types/server-action-types.ts`: For the `ActionState` return type.
  * - `actions/twilio-actions.ts`: For sending WhatsApp messages.
- * - `actions/db/clinic-settings-actions.ts`: For retrieving alert thresholds.
+ * - `actions/db/branch-settings-actions.ts`: For retrieving alert thresholds.
  */
 "use server"
 
@@ -3715,11 +3569,11 @@ import {
   SelectQueueItem
 } from "@/db/schema"
 import { ActionState } from "@/types"
-import { and, asc, desc, eq, gte, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte } from "drizzle-orm"
 import { startOfDay } from "date-fns"
 import { revalidatePath } from "next/cache"
 import { createConsultHistoryAction } from "./consult_history_actions"
-import { getClinicSettingsAction } from "./clinic-settings-actions"
+import { getBranchSettingsAction } from "./branch-settings-actions"
 import { sendWhatsAppMessageAction } from "@/actions/twilio-actions"
 
 /**
@@ -3754,33 +3608,22 @@ type DbOrTxClient =
 
 /**
  * @function checkAndSendProximityAlerts
- * @description Checks the waitlist for a given clinic and sends "You're next" or
+ * @description Checks the waitlist for a given branch and sends "You're next" or
  * "You are N spots away" WhatsApp notifications to patients who have reached the
- * configured alert threshold. This function is designed to be called within a
- * transaction after queue positions have changed.
- *
- * @param {string} clinicId - The ID of the clinic to check.
+ * configured alert threshold.
+ * @param {string} branchId - The ID of the branch to check.
  * @param {DbOrTxClient} tx - The Drizzle transaction client.
- *
- * @notes
- * - This function does not return a value and swallows its own errors to prevent
- * failing the parent database transaction. It logs errors internally.
- * - It fetches the `alertThreshold` from `clinicSettingsTable`.
- * - For MVP, this function does not track if a notification has already been
- * sent for a specific position. This means a user might receive the same
- * alert multiple times. A future improvement would be to add a `lastNotifiedPosition`
- * column to the `queue_items` table to prevent this.
  */
 async function checkAndSendProximityAlerts(
-  clinicId: string,
+  branchId: string,
   tx: DbOrTxClient
 ) {
   try {
-    // 1. Get clinic-specific alert settings
-    const settingsResult = await getClinicSettingsAction(clinicId, tx)
+    // 1. Get branch-specific alert settings
+    const settingsResult = await getBranchSettingsAction(branchId, tx)
     if (!settingsResult.isSuccess || !settingsResult.data) {
       console.error(
-        `Could not retrieve settings for clinic ${clinicId}. Alerts will not be sent.`
+        `Could not retrieve settings for branch ${branchId}. Alerts will not be sent.`
       )
       return
     }
@@ -3789,7 +3632,7 @@ async function checkAndSendProximityAlerts(
     // 2. Get the current waitlist, up to the alert threshold
     const waitlist = await tx.query.queueItems.findMany({
       where: and(
-        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.branchId, branchId),
         eq(queueItemsTable.status, "WAITLIST")
       ),
       orderBy: [asc(queueItemsTable.position)],
@@ -3804,7 +3647,6 @@ async function checkAndSendProximityAlerts(
 
       const position = patient.position + 1 // Display as 1-based index
 
-      // Check if patient is within the notification threshold
       if (position <= alertThreshold) {
         let messageBody = ""
         if (position === 1) {
@@ -3814,7 +3656,6 @@ async function checkAndSendProximityAlerts(
         }
 
         // Asynchronously send the message; do not block the transaction.
-        // If this fails, it will be logged but will not cause a rollback.
         sendWhatsAppMessageAction({
           to: patient.phone,
           body: messageBody
@@ -3846,7 +3687,7 @@ export async function createQueueItemAction(
         .from(queueItemsTable)
         .where(
           and(
-            eq(queueItemsTable.clinicId, data.clinicId),
+            eq(queueItemsTable.branchId, data.branchId),
             eq(queueItemsTable.status, "WAITLIST")
           )
         )
@@ -3887,9 +3728,6 @@ export async function createQueueItemAction(
 // R E A D
 // =================================================================================
 
-/**
- * The shape of the data returned for the public patient-facing queue page.
- */
 export interface PublicQueueDetails {
   queueItem: SelectQueueItem
   position: number
@@ -3900,7 +3738,6 @@ export async function getPublicQueueItemDetailsAction(
   queueItemId: string
 ): Promise<ActionState<PublicQueueDetails>> {
   try {
-    // 1. Fetch the specific patient's queue item
     const [item] = await db
       .select()
       .from(queueItemsTable)
@@ -3917,12 +3754,11 @@ export async function getPublicQueueItemDetailsAction(
       }
     }
 
-    const { clinicId } = item
+    const { branchId } = item
 
-    // 2. Fetch all patients in the waitlist for that clinic to determine position
     const waitlist = await db.query.queueItems.findMany({
       where: and(
-        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.branchId, branchId),
         eq(queueItemsTable.status, "WAITLIST")
       ),
       orderBy: [asc(queueItemsTable.position)]
@@ -3930,12 +3766,11 @@ export async function getPublicQueueItemDetailsAction(
 
     const position = waitlist.findIndex(i => i.id === queueItemId)
 
-    // 3. Calculate estimated wait time based on recent consultations
     const sampleSize = parseInt(process.env.WAIT_ESTIMATE_SAMPLE_SIZE || "5")
     const recentConsults = await db
       .select({ duration: consultHistoryTable.consultDurationSeconds })
       .from(consultHistoryTable)
-      .where(eq(consultHistoryTable.clinicId, clinicId))
+      .where(eq(consultHistoryTable.branchId, branchId))
       .orderBy(desc(consultHistoryTable.createdAt))
       .limit(sampleSize)
 
@@ -3967,17 +3802,12 @@ export async function getPublicQueueItemDetailsAction(
   }
 }
 
-export async function getQueueItemsByClinicAction(
-  clinicId: string
+export async function getQueueItemsByBranchAction(
+  branchId: string
 ): Promise<ActionState<SelectQueueItem[]>> {
   try {
-    const todayStart = startOfDay(new Date())
-
     const items = await db.query.queueItems.findMany({
-      where: and(
-        eq(queueItemsTable.clinicId, clinicId)
-        // gte(queueItemsTable.createdAt, todayStart)
-      ),
+      where: eq(queueItemsTable.branchId, branchId),
       orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)]
     })
 
@@ -3996,14 +3826,14 @@ export async function getQueueItemsByClinicAction(
 }
 
 export async function getQueueItemsByDoctorIdAction(
-  clinicId: string,
+  branchId: string,
   doctorId: string
 ): Promise<ActionState<SelectQueueItem[]>> {
   try {
     const todayStart = startOfDay(new Date())
     const items = await db.query.queueItems.findMany({
       where: and(
-        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.branchId, branchId),
         eq(queueItemsTable.doctorId, doctorId),
         eq(queueItemsTable.status, "WAITLIST"),
         gte(queueItemsTable.createdAt, todayStart)
@@ -4035,7 +3865,7 @@ export async function reorderQueueAction(
   try {
     await db.transaction(async tx => {
       if (items.length === 0) {
-        return // No items to reorder, exit transaction.
+        return
       }
 
       const updatePromises = items.map(item =>
@@ -4046,17 +3876,14 @@ export async function reorderQueueAction(
       )
       await Promise.all(updatePromises)
 
-      // To check for alerts, we need the clinicId. We can get it from any
-      // of the items being moved.
       const [firstItem] = await tx
-        .select({ clinicId: queueItemsTable.clinicId })
+        .select({ branchId: queueItemsTable.branchId })
         .from(queueItemsTable)
         .where(eq(queueItemsTable.id, items[0].id))
         .limit(1)
 
-      // If the item exists, trigger the proximity alert check.
-      if (firstItem && firstItem.clinicId) {
-        await checkAndSendProximityAlerts(firstItem.clinicId, tx)
+      if (firstItem && firstItem.branchId) {
+        await checkAndSendProximityAlerts(firstItem.branchId, tx)
       }
     })
 
@@ -4106,7 +3933,7 @@ export async function updateQueueStatusAction(
         const historyResult = await createConsultHistoryAction({
           data: {
             queueItemId: currentItem.id,
-            clinicId: currentItem.clinicId,
+            branchId: currentItem.branchId,
             waitDurationSeconds,
             consultDurationSeconds
           },
@@ -4131,13 +3958,12 @@ export async function updateQueueStatusAction(
         .where(eq(queueItemsTable.id, queueItemId))
         .returning()
 
-      // Trigger alerts if a patient's removal affects the waitlist.
       if (
         (newStatus === "COMPLETE" || newStatus === "CANCELLED") &&
         currentItem.status !== "COMPLETE" &&
         currentItem.status !== "CANCELLED"
       ) {
-        await checkAndSendProximityAlerts(currentItem.clinicId, tx)
+        await checkAndSendProximityAlerts(currentItem.branchId, tx)
       }
 
       return updated
@@ -4175,7 +4001,7 @@ File: /Users/dev/Desktop/project/qcare-mvp/actions/db/analytics-actions.ts
  * @description
  * This file contains server actions dedicated to fetching and processing
  * analytics data from the `consult_history` table. These actions are designed
- * to be called from the Admin Dashboard.
+ * to be called from the Admin Dashboard and are scoped by branch.
  */
 "use server"
 
@@ -4184,7 +4010,7 @@ import { consultHistoryTable, SelectConsultHistory } from "@/db/schema"
 import { ActionState } from "@/types"
 import { and, avg, desc, eq, gte } from "drizzle-orm"
 import { startOfDay, subDays } from "date-fns"
-import stringify from "csv-stringify" // Corrected: Use default import
+import { stringify } from "csv-stringify" // Corrected import
 
 interface AverageTimes {
   avgWaitSeconds: number
@@ -4192,7 +4018,7 @@ interface AverageTimes {
 }
 
 export async function getDailyAverageWaitTimesAction(
-  clinicId: string
+  branchId: string
 ): Promise<ActionState<AverageTimes>> {
   try {
     const todayStart = startOfDay(new Date())
@@ -4205,7 +4031,7 @@ export async function getDailyAverageWaitTimesAction(
       .from(consultHistoryTable)
       .where(
         and(
-          eq(consultHistoryTable.clinicId, clinicId),
+          eq(consultHistoryTable.branchId, branchId),
           gte(consultHistoryTable.createdAt, todayStart)
         )
       )
@@ -4232,14 +4058,14 @@ export async function getDailyAverageWaitTimesAction(
 }
 
 export async function getConsultHistoryForExportAction(
-  clinicId: string
+  branchId: string
 ): Promise<ActionState<SelectConsultHistory[]>> {
   try {
     const thirtyDaysAgo = subDays(new Date(), 30)
 
     const history = await db.query.consultHistory.findMany({
       where: and(
-        eq(consultHistoryTable.clinicId, clinicId),
+        eq(consultHistoryTable.branchId, branchId),
         gte(consultHistoryTable.createdAt, thirtyDaysAgo)
       ),
       orderBy: [desc(consultHistoryTable.createdAt)]
@@ -4261,17 +4087,14 @@ export async function getConsultHistoryForExportAction(
 
 /**
  * @function exportConsultHistoryAction
- * @description Fetches consultation history and converts it to a CSV string.
- * This version uses the asynchronous, callback-based API of csv-stringify
- * wrapped in a Promise to ensure compatibility with modern bundlers.
- *
- * @param {string} clinicId - The UUID of the clinic.
- * @returns {Promise<ActionState<{ csv: string }>>} The generated CSV content as a string.
+ * @description Fetches consultation history for a branch and converts it to a CSV string.
+ * @param {string} branchId - The UUID of the branch.
+ * @returns {Promise<ActionState<{ csv: string }>>} The generated CSV content.
  */
 export async function exportConsultHistoryAction(
-  clinicId: string
+  branchId: string
 ): Promise<ActionState<{ csv: string }>> {
-  const historyResult = await getConsultHistoryForExportAction(clinicId)
+  const historyResult = await getConsultHistoryForExportAction(branchId)
 
   if (!historyResult.isSuccess) {
     return historyResult
@@ -4293,7 +4116,9 @@ export async function exportConsultHistoryAction(
           if (stringified) {
             return resolve(stringified)
           }
-          return reject(new Error("CSV stringification resulted in undefined value."))
+          return reject(
+            new Error("CSV stringification resulted in undefined value.")
+          )
         }
       )
     })
@@ -4534,92 +4359,238 @@ export default async function AuthLayout({ children }: AuthLayoutProps) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
 /*
-This server component provides a tailwind indicator for the app in dev mode.
+Hook to check if the user is on a mobile device.
 */
 
-"use server"
+import * as React from "react"
 
-export async function TailwindIndicator() {
-  // Don't show in production
-  if (process.env.NODE_ENV === "production") return null
+const MOBILE_BREAKPOINT = 768
 
-  return (
-    <div className="fixed bottom-12 left-3 z-50 flex size-6 items-center justify-center rounded-full bg-gray-800 p-3 font-mono text-xs text-white">
-      <div className="block sm:hidden">xs</div>
-      <div className="hidden sm:block md:hidden">sm</div>
-      <div className="hidden md:block lg:hidden">md</div>
-      <div className="hidden lg:block xl:hidden">lg</div>
-      <div className="hidden xl:block 2xl:hidden">xl</div>
-      <div className="hidden 2xl:block">2xl</div>
-    </div>
-  )
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/theme-switcher.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
 /*
-This client component provides a theme switcher for the app.
+Hook for copying text to the clipboard.
 */
 
 "use client"
 
-import { cn } from "@/lib/utils"
-import { Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
-import { HTMLAttributes, ReactNode } from "react"
+import { useState } from "react"
 
-interface ThemeSwitcherProps extends HTMLAttributes<HTMLDivElement> {
-  children?: ReactNode
+export interface useCopyToClipboardProps {
+  timeout?: number
 }
 
-export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
-  const { setTheme, theme } = useTheme()
+export function useCopyToClipboard({
+  timeout = 2000
+}: useCopyToClipboardProps) {
+  const [isCopied, setIsCopied] = useState<Boolean>(false)
 
-  const handleChange = (theme: "dark" | "light") => {
-    localStorage.setItem("theme", theme)
-    setTheme(theme)
+  const copyToClipboard = (value: string) => {
+    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
+      return
+    }
+
+    if (!value) {
+      return
+    }
+
+    navigator.clipboard.writeText(value).then(() => {
+      setIsCopied(true)
+
+      setTimeout(() => {
+        setIsCopied(false)
+      }, timeout)
+    })
   }
 
-  return (
-    <div
-      className={cn(
-        "p-1 hover:cursor-pointer hover:opacity-50",
-        props.className
-      )}
-      onClick={() => handleChange(theme === "light" ? "dark" : "light")}
-    >
-      {theme === "dark" ? (
-        <Moon className="size-6" />
-      ) : (
-        <Sun className="size-6" />
-      )}
-    </div>
-  )
+  return { isCopied, copyToClipboard }
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/providers.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
 /*
-This client component provides the providers for the app.
+Hook to display toast notifications.
 */
 
 "use client"
 
-import { TooltipProvider } from "@/components/ui/tooltip"
-import {
-  ThemeProvider as NextThemesProvider,
-  ThemeProviderProps
-} from "next-themes"
+// Inspired by react-hot-toast library
+import * as React from "react"
 
-export const Providers = ({ children, ...props }: ThemeProviderProps) => {
-  return (
-    <NextThemesProvider {...props}>
-      <TooltipProvider>{children}</TooltipProvider>
-    </NextThemesProvider>
-  )
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
 }
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST"
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
+  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
+  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
+  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        )
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach(toast => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
+        )
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return { ...state, toasts: [] }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter(t => t.id !== action.toastId)
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach(listener => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: open => {
+        if (!open) dismiss()
+      }
+    }
+  })
+
+  return { id: id, dismiss, update }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
+  }
+}
+
+export { toast, useToast }
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/db/schema/queue-items-schema.ts
@@ -4642,7 +4613,7 @@ File: /Users/dev/Desktop/project/qcare-mvp/db/schema/queue-items-schema.ts
  * @relations
  * - FK branchId ➔ branches.id (ON DELETE CASCADE)
  */
-"use server"
+// "use server"
 
 import {
   integer,
@@ -4727,7 +4698,7 @@ File: /Users/dev/Desktop/project/qcare-mvp/db/schema/consult-history-schema.ts
  * - We use `branchId` for composite indexing and because `queue_items`
  * may have a different retention policy.
  */
-"use server"
+// "use server"
 
 import { integer, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
 import { branchesTable } from "./branches-schema"
@@ -4767,19 +4738,74 @@ export type SelectConsultHistory = typeof consultHistoryTable.$inferSelect
 
 
 File: /Users/dev/Desktop/project/qcare-mvp/db/schema/profiles-schema.ts
-/*
-Defines the database schema for profiles.
-*/
+/**
+ * @file profiles-schema.ts
+ *
+ * @description
+ * Drizzle ORM table definition for **`profiles`**. This table links a user from
+ * the authentication provider (Clerk) to their specific role and position within
+ * the multi-tenant hierarchy (Organization -> Branch).
+ *
+ * @columns
+ * - userId (text, PK)         : The Clerk user ID.
+ * - role (enum)               : The user's application role, determining their permissions.
+ * - organizationId (uuid, FK) : The organization the user belongs to.
+ * - branchId (uuid, FK)       : The specific branch the user is assigned to.
+ * - membership (enum)         : SaaS subscription tier (e.g., free, pro).
+ * - stripe...                 : Stripe-related IDs for subscription management.
+ * - createdAt / updatedAt     : Standard audit timestamps.
+ */
+// "use server"
 
-import { pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { organizationsTable } from "./organization-schema"
+import { branchesTable } from "./branches-schema"
 
+/**
+ * Defines the possible roles a user can have within the application.
+ * - super_admin: Manages an entire organization, including its branches and users.
+ * - branch_admin: Manages a specific branch, including its staff.
+ * - doctor: Views their queue and manages consultations within a branch.
+ * - receptionist: Manages the patient queue for a branch.
+ */
+export const roleEnum = pgEnum("role", [
+  "super_admin",
+  "branch_admin",
+  "doctor",
+  "receptionist"
+])
+
+/**
+ * Defines the SaaS subscription tier for an organization/user. This is separate
+ * from the application role and governs feature access based on payment.
+ */
 export const membershipEnum = pgEnum("membership", ["free", "pro"])
 
 export const profilesTable = pgTable("profiles", {
+  /** The user's ID from the authentication provider (Clerk). Serves as the primary key. */
   userId: text("user_id").primaryKey().notNull(),
+
+  /** The user's role, which dictates their permissions within the application. */
+  role: roleEnum("role").notNull(),
+
+  /** Foreign key linking the user to their parent organization. Cascades on delete. */
+  organizationId: uuid("organization_id")
+    .references(() => organizationsTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  /** Foreign key linking the user to their assigned branch. Cascades on delete. */
+  branchId: uuid("branch_id")
+    .references(() => branchesTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  /** The user's SaaS membership status, for billing purposes. */
   membership: membershipEnum("membership").notNull().default("free"),
+
+  /** Stripe-related fields for managing subscriptions. */
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+
+  /** Standard audit timestamps. */
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -4787,9 +4813,10 @@ export const profilesTable = pgTable("profiles", {
     .$onUpdate(() => new Date())
 })
 
+/** Drizzle type for inserting a profile record */
 export type InsertProfile = typeof profilesTable.$inferInsert
+/** Drizzle type for selecting a profile record */
 export type SelectProfile = typeof profilesTable.$inferSelect
-
 
 File: /Users/dev/Desktop/project/qcare-mvp/db/schema/index.ts
 /**
@@ -4809,7 +4836,7 @@ File: /Users/dev/Desktop/project/qcare-mvp/db/schema/index.ts
  * The order of exports is not important but keeping them alphabetical
  * improves merge resolution.
  */
-"use server"
+// "use server"
 
 export * from "./organization-schema"
 export * from "./branches-schema"
@@ -5117,6 +5144,7 @@ export default function PatientQueueView({
 }
 
 </file_contents>
+
 
 </existing_code>
 

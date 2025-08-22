@@ -13,7 +13,7 @@
  * - `db/schema/queue-items-schema.ts`: For table and type definitions.
  * - `types/server-action-types.ts`: For the `ActionState` return type.
  * - `actions/twilio-actions.ts`: For sending WhatsApp messages.
- * - `actions/db/clinic-settings-actions.ts`: For retrieving alert thresholds.
+ * - `actions/db/branch-settings-actions.ts`: For retrieving alert thresholds.
  */
 "use server"
 
@@ -26,11 +26,11 @@ import {
   SelectQueueItem
 } from "@/db/schema"
 import { ActionState } from "@/types"
-import { and, asc, desc, eq, gte, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte } from "drizzle-orm"
 import { startOfDay } from "date-fns"
 import { revalidatePath } from "next/cache"
 import { createConsultHistoryAction } from "./consult_history_actions"
-import { getClinicSettingsAction } from "./clinic-settings-actions"
+import { getBranchSettingsAction } from "./branch-settings-actions"
 import { sendWhatsAppMessageAction } from "@/actions/twilio-actions"
 
 /**
@@ -65,33 +65,22 @@ type DbOrTxClient =
 
 /**
  * @function checkAndSendProximityAlerts
- * @description Checks the waitlist for a given clinic and sends "You're next" or
+ * @description Checks the waitlist for a given branch and sends "You're next" or
  * "You are N spots away" WhatsApp notifications to patients who have reached the
- * configured alert threshold. This function is designed to be called within a
- * transaction after queue positions have changed.
- *
- * @param {string} clinicId - The ID of the clinic to check.
+ * configured alert threshold.
+ * @param {string} branchId - The ID of the branch to check.
  * @param {DbOrTxClient} tx - The Drizzle transaction client.
- *
- * @notes
- * - This function does not return a value and swallows its own errors to prevent
- * failing the parent database transaction. It logs errors internally.
- * - It fetches the `alertThreshold` from `clinicSettingsTable`.
- * - For MVP, this function does not track if a notification has already been
- * sent for a specific position. This means a user might receive the same
- * alert multiple times. A future improvement would be to add a `lastNotifiedPosition`
- * column to the `queue_items` table to prevent this.
  */
 async function checkAndSendProximityAlerts(
-  clinicId: string,
+  branchId: string,
   tx: DbOrTxClient
 ) {
   try {
-    // 1. Get clinic-specific alert settings
-    const settingsResult = await getClinicSettingsAction(clinicId, tx)
+    // 1. Get branch-specific alert settings
+    const settingsResult = await getBranchSettingsAction(branchId, tx)
     if (!settingsResult.isSuccess || !settingsResult.data) {
       console.error(
-        `Could not retrieve settings for clinic ${clinicId}. Alerts will not be sent.`
+        `Could not retrieve settings for branch ${branchId}. Alerts will not be sent.`
       )
       return
     }
@@ -100,7 +89,7 @@ async function checkAndSendProximityAlerts(
     // 2. Get the current waitlist, up to the alert threshold
     const waitlist = await tx.query.queueItems.findMany({
       where: and(
-        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.branchId, branchId),
         eq(queueItemsTable.status, "WAITLIST")
       ),
       orderBy: [asc(queueItemsTable.position)],
@@ -115,7 +104,6 @@ async function checkAndSendProximityAlerts(
 
       const position = patient.position + 1 // Display as 1-based index
 
-      // Check if patient is within the notification threshold
       if (position <= alertThreshold) {
         let messageBody = ""
         if (position === 1) {
@@ -125,7 +113,6 @@ async function checkAndSendProximityAlerts(
         }
 
         // Asynchronously send the message; do not block the transaction.
-        // If this fails, it will be logged but will not cause a rollback.
         sendWhatsAppMessageAction({
           to: patient.phone,
           body: messageBody
@@ -157,7 +144,7 @@ export async function createQueueItemAction(
         .from(queueItemsTable)
         .where(
           and(
-            eq(queueItemsTable.clinicId, data.clinicId),
+            eq(queueItemsTable.branchId, data.branchId),
             eq(queueItemsTable.status, "WAITLIST")
           )
         )
@@ -198,9 +185,6 @@ export async function createQueueItemAction(
 // R E A D
 // =================================================================================
 
-/**
- * The shape of the data returned for the public patient-facing queue page.
- */
 export interface PublicQueueDetails {
   queueItem: SelectQueueItem
   position: number
@@ -211,7 +195,6 @@ export async function getPublicQueueItemDetailsAction(
   queueItemId: string
 ): Promise<ActionState<PublicQueueDetails>> {
   try {
-    // 1. Fetch the specific patient's queue item
     const [item] = await db
       .select()
       .from(queueItemsTable)
@@ -228,12 +211,11 @@ export async function getPublicQueueItemDetailsAction(
       }
     }
 
-    const { clinicId } = item
+    const { branchId } = item
 
-    // 2. Fetch all patients in the waitlist for that clinic to determine position
     const waitlist = await db.query.queueItems.findMany({
       where: and(
-        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.branchId, branchId),
         eq(queueItemsTable.status, "WAITLIST")
       ),
       orderBy: [asc(queueItemsTable.position)]
@@ -241,12 +223,11 @@ export async function getPublicQueueItemDetailsAction(
 
     const position = waitlist.findIndex(i => i.id === queueItemId)
 
-    // 3. Calculate estimated wait time based on recent consultations
     const sampleSize = parseInt(process.env.WAIT_ESTIMATE_SAMPLE_SIZE || "5")
     const recentConsults = await db
       .select({ duration: consultHistoryTable.consultDurationSeconds })
       .from(consultHistoryTable)
-      .where(eq(consultHistoryTable.clinicId, clinicId))
+      .where(eq(consultHistoryTable.branchId, branchId))
       .orderBy(desc(consultHistoryTable.createdAt))
       .limit(sampleSize)
 
@@ -278,17 +259,12 @@ export async function getPublicQueueItemDetailsAction(
   }
 }
 
-export async function getQueueItemsByClinicAction(
-  clinicId: string
+export async function getQueueItemsByBranchAction(
+  branchId: string
 ): Promise<ActionState<SelectQueueItem[]>> {
   try {
-    const todayStart = startOfDay(new Date())
-
     const items = await db.query.queueItems.findMany({
-      where: and(
-        eq(queueItemsTable.clinicId, clinicId)
-        // gte(queueItemsTable.createdAt, todayStart)
-      ),
+      where: eq(queueItemsTable.branchId, branchId),
       orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)]
     })
 
@@ -307,14 +283,14 @@ export async function getQueueItemsByClinicAction(
 }
 
 export async function getQueueItemsByDoctorIdAction(
-  clinicId: string,
+  branchId: string,
   doctorId: string
 ): Promise<ActionState<SelectQueueItem[]>> {
   try {
     const todayStart = startOfDay(new Date())
     const items = await db.query.queueItems.findMany({
       where: and(
-        eq(queueItemsTable.clinicId, clinicId),
+        eq(queueItemsTable.branchId, branchId),
         eq(queueItemsTable.doctorId, doctorId),
         eq(queueItemsTable.status, "WAITLIST"),
         gte(queueItemsTable.createdAt, todayStart)
@@ -346,7 +322,7 @@ export async function reorderQueueAction(
   try {
     await db.transaction(async tx => {
       if (items.length === 0) {
-        return // No items to reorder, exit transaction.
+        return
       }
 
       const updatePromises = items.map(item =>
@@ -357,17 +333,14 @@ export async function reorderQueueAction(
       )
       await Promise.all(updatePromises)
 
-      // To check for alerts, we need the clinicId. We can get it from any
-      // of the items being moved.
       const [firstItem] = await tx
-        .select({ clinicId: queueItemsTable.clinicId })
+        .select({ branchId: queueItemsTable.branchId })
         .from(queueItemsTable)
         .where(eq(queueItemsTable.id, items[0].id))
         .limit(1)
 
-      // If the item exists, trigger the proximity alert check.
-      if (firstItem && firstItem.clinicId) {
-        await checkAndSendProximityAlerts(firstItem.clinicId, tx)
+      if (firstItem && firstItem.branchId) {
+        await checkAndSendProximityAlerts(firstItem.branchId, tx)
       }
     })
 
@@ -417,7 +390,7 @@ export async function updateQueueStatusAction(
         const historyResult = await createConsultHistoryAction({
           data: {
             queueItemId: currentItem.id,
-            clinicId: currentItem.clinicId,
+            branchId: currentItem.branchId,
             waitDurationSeconds,
             consultDurationSeconds
           },
@@ -442,13 +415,12 @@ export async function updateQueueStatusAction(
         .where(eq(queueItemsTable.id, queueItemId))
         .returning()
 
-      // Trigger alerts if a patient's removal affects the waitlist.
       if (
         (newStatus === "COMPLETE" || newStatus === "CANCELLED") &&
         currentItem.status !== "COMPLETE" &&
         currentItem.status !== "CANCELLED"
       ) {
-        await checkAndSendProximityAlerts(currentItem.clinicId, tx)
+        await checkAndSendProximityAlerts(currentItem.branchId, tx)
       }
 
       return updated

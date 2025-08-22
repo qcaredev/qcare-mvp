@@ -15,6 +15,13 @@
       "when": 1755823600739,
       "tag": "0001_happy_toxin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1755824371856,
+      "tag": "0002_little_gambit",
+      "breakpoints": true
     }
   ]
 }

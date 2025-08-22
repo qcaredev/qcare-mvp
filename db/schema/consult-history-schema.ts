@@ -17,7 +17,7 @@
  * - We use `branchId` for composite indexing and because `queue_items`
  * may have a different retention policy.
  */
-"use server"
+// "use server"
 
 import { integer, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
 import { branchesTable } from "./branches-schema"

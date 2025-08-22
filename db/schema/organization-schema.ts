@@ -14,7 +14,7 @@
  * - name (text)           : The human-readable name of the organization (e.g., "NIMS Hospitals").
  * - createdAt / updatedAt : Standard audit timestamps.
  */
-"use server"
+// "use server"
 
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
 

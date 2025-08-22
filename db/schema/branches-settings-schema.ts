@@ -16,7 +16,7 @@
  * @rules
  * - Exactly **one row per branch** enforced via a unique constraint.
  */
-"use server"
+// "use server"
 
 import {
   pgTable,

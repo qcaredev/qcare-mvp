@@ -15,7 +15,7 @@
  * The order of exports is not important but keeping them alphabetical
  * improves merge resolution.
  */
-"use server"
+// "use server"
 
 export * from "./organization-schema"
 export * from "./branches-schema"

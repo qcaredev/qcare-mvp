@@ -7,7 +7,7 @@
  */
 "use client"
 
-import { updateClinicSettingsAction } from "@/actions/db/clinic-settings-actions"
+import { updateClinicSettingsAction } from "@/actions/db/branch-settings-actions"
 import { Button } from "@/components/ui/button"
 import {
   Form,

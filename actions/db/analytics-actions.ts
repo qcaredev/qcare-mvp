@@ -4,7 +4,7 @@
  * @description
  * This file contains server actions dedicated to fetching and processing
  * analytics data from the `consult_history` table. These actions are designed
- * to be called from the Admin Dashboard.
+ * to be called from the Admin Dashboard and are scoped by branch.
  */
 "use server"
 
@@ -13,7 +13,7 @@ import { consultHistoryTable, SelectConsultHistory } from "@/db/schema"
 import { ActionState } from "@/types"
 import { and, avg, desc, eq, gte } from "drizzle-orm"
 import { startOfDay, subDays } from "date-fns"
-import stringify from "csv-stringify" // Corrected: Use default import
+import { stringify } from "csv-stringify" // Corrected import
 
 interface AverageTimes {
   avgWaitSeconds: number
@@ -21,7 +21,7 @@ interface AverageTimes {
 }
 
 export async function getDailyAverageWaitTimesAction(
-  clinicId: string
+  branchId: string
 ): Promise<ActionState<AverageTimes>> {
   try {
     const todayStart = startOfDay(new Date())
@@ -34,7 +34,7 @@ export async function getDailyAverageWaitTimesAction(
       .from(consultHistoryTable)
       .where(
         and(
-          eq(consultHistoryTable.clinicId, clinicId),
+          eq(consultHistoryTable.branchId, branchId),
           gte(consultHistoryTable.createdAt, todayStart)
         )
       )
@@ -61,14 +61,14 @@ export async function getDailyAverageWaitTimesAction(
 }
 
 export async function getConsultHistoryForExportAction(
-  clinicId: string
+  branchId: string
 ): Promise<ActionState<SelectConsultHistory[]>> {
   try {
     const thirtyDaysAgo = subDays(new Date(), 30)
 
     const history = await db.query.consultHistory.findMany({
       where: and(
-        eq(consultHistoryTable.clinicId, clinicId),
+        eq(consultHistoryTable.branchId, branchId),
         gte(consultHistoryTable.createdAt, thirtyDaysAgo)
       ),
       orderBy: [desc(consultHistoryTable.createdAt)]
@@ -90,17 +90,14 @@ export async function getConsultHistoryForExportAction(
 
 /**
  * @function exportConsultHistoryAction
- * @description Fetches consultation history and converts it to a CSV string.
- * This version uses the asynchronous, callback-based API of csv-stringify
- * wrapped in a Promise to ensure compatibility with modern bundlers.
- *
- * @param {string} clinicId - The UUID of the clinic.
- * @returns {Promise<ActionState<{ csv: string }>>} The generated CSV content as a string.
+ * @description Fetches consultation history for a branch and converts it to a CSV string.
+ * @param {string} branchId - The UUID of the branch.
+ * @returns {Promise<ActionState<{ csv: string }>>} The generated CSV content.
  */
 export async function exportConsultHistoryAction(
-  clinicId: string
+  branchId: string
 ): Promise<ActionState<{ csv: string }>> {
-  const historyResult = await getConsultHistoryForExportAction(clinicId)
+  const historyResult = await getConsultHistoryForExportAction(branchId)
 
   if (!historyResult.isSuccess) {
     return historyResult
@@ -122,7 +119,9 @@ export async function exportConsultHistoryAction(
           if (stringified) {
             return resolve(stringified)
           }
-          return reject(new Error("CSV stringification resulted in undefined value."))
+          return reject(
+            new Error("CSV stringification resulted in undefined value.")
+          )
         }
       )
     })

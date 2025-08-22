@@ -15,7 +15,7 @@
  * - name (text)               : Human-readable name of the branch (e.g., "Hyderabad Branch").
  * - createdAt / updatedAt     : Standard audit timestamps.
  */
-"use server"
+// "use server"
 
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
 import { organizationsTable } from "./organization-schema"

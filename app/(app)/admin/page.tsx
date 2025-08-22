@@ -8,7 +8,7 @@
 "use server"
 
 import { getDailyAverageWaitTimesAction } from "@/actions/db/analytics-actions"
-import { getClinicSettingsAction } from "@/actions/db/clinic-settings-actions"
+import { getClinicSettingsAction } from "@/actions/db/branch-settings-actions"
 import { Suspense } from "react"
 import { AdminDashboardClient } from "./_components/admin-dashboard-client"
 
