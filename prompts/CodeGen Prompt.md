@@ -1904,8 +1904,6 @@ The plan proceeds from foundational setup through back‑end schema & actions, t
 │       └── theme-switcher.tsx
 ├── db
 │   ├── schema
-│   │   ├── clinic-settings-schema.ts
-│   │   ├── clinics-schema.ts
 │   │   ├── consult-history-schema.ts
 │   │   ├── index.ts
 │   │   ├── profiles-schema.ts
@@ -2398,6 +2396,24 @@ Contains the ESLint configuration for the app.
 }
 
 
+File: /Users/dev/Desktop/project/qcare-mvp/types/server-action-types.ts
+/*
+Contains the general server action types.
+*/
+
+export type ActionState<T> =
+  | { isSuccess: true; message: string; data: T }
+  | { isSuccess: false; message: string; data?: never }
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/types/index.ts
+/*
+Exports the types for the app.
+*/
+
+export * from "./server-action-types"
+
+
 File: /Users/dev/Desktop/project/qcare-mvp/actions/twilio-actions.ts
 /**
  * @file twilio-actions.ts
@@ -2663,24 +2679,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/types/server-action-types.ts
-/*
-Contains the general server action types.
-*/
-
-export type ActionState<T> =
-  | { isSuccess: true; message: string; data: T }
-  | { isSuccess: false; message: string; data?: never }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/types/index.ts
-/*
-Exports the types for the app.
-*/
-
-export * from "./server-action-types"
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/layout.tsx
 import { ClerkProvider } from "@clerk/nextjs"
 import { Inter } from "next/font/google"
@@ -2835,8 +2833,8 @@ File: /Users/dev/Desktop/project/qcare-mvp/db/db.ts
  */
 
 import {
-  clinicsTable,
-  clinicSettingsTable,
+  branchesTable,
+  branchSettingsTable,
   consultHistoryTable,
   profilesTable,
   queueItemsTable
@@ -2854,10 +2852,10 @@ config({ path: ".env.local" })
  */
 const schema = {
   profiles: profilesTable,
-  clinics: clinicsTable,
+  clinics: branchesTable,
   queueItems: queueItemsTable,
   consultHistory: consultHistoryTable,
-  clinicSettings: clinicSettingsTable
+  clinicSettings: branchSettingsTable
 } as const
 
 /**
@@ -4624,98 +4622,27 @@ export const Providers = ({ children, ...props }: ThemeProviderProps) => {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/clinic-settings-schema.ts
-/**
- * @file clinic-settings-schema.ts
- *
- * @description
- *  Drizzle ORM table definition for **`clinic_settings`**.
- *  Holds user‑configurable behaviour such as WhatsApp alert thresholds.
- *
- * @columns
- *  - clinicId (FK)          : The owning clinic (unique)
- *  - alertThreshold         : Integer (# patients away to trigger alert)
- *  - defaultLanguage        : Text (e.g., 'en' | 'hi')
- *  - whatsappTemplateId     : Twilio template reference
- *  - createdAt / updatedAt  : Audit
- *
- * @rules
- *  - Exactly **one row per clinic** enforced via a unique constraint.
- */
-
-import {
-  pgTable,
-  text,
-  integer,
-  timestamp,
-  uuid,
-  unique
-} from "drizzle-orm/pg-core"
-
-import { clinicsTable } from "./clinics-schema"
-
-export const clinicSettingsTable = pgTable(
-  "clinic_settings",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-
-    clinicId: uuid("clinic_id")
-      .references(() => clinicsTable.id, { onDelete: "cascade" })
-      .notNull(),
-
-    alertThreshold: integer("alert_threshold").notNull().default(3),
-
-    defaultLanguage: text("default_language").notNull().default("en"),
-
-    whatsappTemplateId: text("whatsapp_template_id"),
-
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date())
-  },
-  /**
-   * Table‑level configurations (constraints, indexes).
-   * `unique(clinicId)` makes sure each clinic has at most one settings row.
-   */
-  table => ({
-    clinicUnique: unique("clinic_settings_clinic_id_unique").on(table.clinicId)
-  })
-)
-
-export type InsertClinicSettings = typeof clinicSettingsTable.$inferInsert
-export type SelectClinicSettings = typeof clinicSettingsTable.$inferSelect
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/db/schema/queue-items-schema.ts
 /**
  * @file queue-items-schema.ts
  *
  * @description
- *  Drizzle ORM table definition for **`queue_items`**. Each row represents
- *  a patient currently (or previously) in an OPD queue.
- *
- *  The table supports real‑time updates via Supabase Realtime, so we set
- *  `replica identity full` in Step 1.2 SQL instructions.
+ * Drizzle ORM table definition for **`queue_items`**. Each row represents
+ * a patient currently (or previously) in an OPD queue for a specific branch.
  *
  * @columns
- *  - id, clinicId              : Identification & tenancy
- *  - patientName, phone        : Patient contact details
- *  - reason                    : Reason for visit / chief complaint
- *  - status (enum)             : WAITLIST | SERVING | COMPLETE | CANCELLED
- *  - position                  : Integer ordering within WAITLIST
- *  - doctorId                  : Optional textual identifier for doctor
- *  - createdAt / updatedAt     : Audit timestamps
+ * - id, branchId            : Identification & tenancy.
+ * - patientName, phone      : Patient contact details.
+ * - reason                  : Reason for visit / chief complaint.
+ * - status (enum)           : WAITLIST | SERVING | COMPLETE | CANCELLED.
+ * - position                : Integer ordering within WAITLIST.
+ * - doctorId                : Optional textual identifier for doctor.
+ * - createdAt / updatedAt   : Audit timestamps.
  *
  * @relations
- *  - FK clinicId ➔ clinics.id   (ON DELETE CASCADE)
- *
- * @business‑rules
- *  - `position` is only meaningful when `status = WAITLIST`.
- *  - `phone` is optional because some walk‑ins may not provide a number.
+ * - FK branchId ➔ branches.id (ON DELETE CASCADE)
  */
+"use server"
 
 import {
   integer,
@@ -4725,8 +4652,7 @@ import {
   timestamp,
   uuid
 } from "drizzle-orm/pg-core"
-
-import { clinicsTable } from "./clinics-schema"
+import { branchesTable } from "./branches-schema"
 
 /** Status enumeration as per functional spec */
 export const queueStatusEnum = pgEnum("queue_status", [
@@ -4739,12 +4665,12 @@ export const queueStatusEnum = pgEnum("queue_status", [
 export const queueItemsTable = pgTable("queue_items", {
   id: uuid("id").defaultRandom().primaryKey(),
 
-  /** Tenant reference — cascades on clinic deletion */
-  clinicId: uuid("clinic_id")
-    .references(() => clinicsTable.id, { onDelete: "cascade" })
+  /** Tenant reference — cascades on branch deletion */
+  branchId: uuid("branch_id")
+    .references(() => branchesTable.id, { onDelete: "cascade" })
     .notNull(),
 
-  /** Patient‑facing fields */
+  /** Patient-facing fields */
   patientName: text("patient_name").notNull(),
   phone: text("phone"), // Optional
 
@@ -4757,7 +4683,7 @@ export const queueItemsTable = pgTable("queue_items", {
   /**
    * Display ordering inside WAITLIST.
    * IMPORTANT: Managed exclusively by server actions that enforce a dense
-   * ranking (0‑n without gaps) to simplify “position” math.
+   * ranking (0-n without gaps) to simplify “position” math.
    */
   position: integer("position").notNull().default(0),
 
@@ -4775,9 +4701,9 @@ export const queueItemsTable = pgTable("queue_items", {
     .$onUpdate(() => new Date())
 })
 
-/** Insert type for `queueItemsTable` */
+/** Drizzle type for inserting a queue item */
 export type InsertQueueItem = typeof queueItemsTable.$inferInsert
-/** Select type for `queueItemsTable` */
+/** Drizzle type for selecting a queue item */
 export type SelectQueueItem = typeof queueItemsTable.$inferSelect
 
 
@@ -4786,25 +4712,25 @@ File: /Users/dev/Desktop/project/qcare-mvp/db/schema/consult-history-schema.ts
  * @file consult-history-schema.ts
  *
  * @description
- *  Drizzle ORM table definition for **`consult_history`**.
- *  Each row captures timing metrics once a consultation finishes,
- *  enabling analytics without scanning the volatile `queue_items`.
+ * Drizzle ORM table definition for **`consult_history`**.
+ * Each row captures timing metrics once a consultation finishes at a branch,
+ * enabling analytics without scanning the volatile `queue_items`.
  *
  * @columns
- *  - queueItemId : FK to the source queue item (CASCADE on delete)
- *  - clinicId    : Tenant, duplicative for faster analytics queries
- *  - waitDurationSeconds
- *  - consultDurationSeconds
- *  - createdAt / updatedAt : Audit
+ * - queueItemId           : FK to the source queue item.
+ * - branchId              : Tenant, for faster analytics queries.
+ * - waitDurationSeconds   : Time from registration to consult start.
+ * - consultDurationSeconds: Time from consult start to completion.
+ * - createdAt             : Audit timestamp.
  *
  * @notes
- *  - We duplicate `clinicId` for composite indexing and because
- *    `queue_items` may be removed after 30 days retention.
+ * - We use `branchId` for composite indexing and because `queue_items`
+ * may have a different retention policy.
  */
+"use server"
 
 import { integer, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
-
-import { clinicsTable } from "./clinics-schema"
+import { branchesTable } from "./branches-schema"
 import { queueItemsTable } from "./queue-items-schema"
 
 export const consultHistoryTable = pgTable("consult_history", {
@@ -4815,9 +4741,9 @@ export const consultHistoryTable = pgTable("consult_history", {
     .references(() => queueItemsTable.id, { onDelete: "cascade" })
     .notNull(),
 
-  /** Tenant reference (duplicated for faster aggregation) */
-  clinicId: uuid("clinic_id")
-    .references(() => clinicsTable.id, { onDelete: "cascade" })
+  /** Tenant reference (for faster aggregation) */
+  branchId: uuid("branch_id")
+    .references(() => branchesTable.id, { onDelete: "cascade" })
     .notNull(),
 
   /** Time between registration and consult start, in seconds */
@@ -4834,7 +4760,9 @@ export const consultHistoryTable = pgTable("consult_history", {
     .$onUpdate(() => new Date())
 })
 
+/** Drizzle type for inserting consultation history */
 export type InsertConsultHistory = typeof consultHistoryTable.$inferInsert
+/** Drizzle type for selecting consultation history */
 export type SelectConsultHistory = typeof consultHistoryTable.$inferSelect
 
 
@@ -4873,67 +4801,22 @@ File: /Users/dev/Desktop/project/qcare-mvp/db/schema/index.ts
  *  improves merge resolution.
  */
 
-export * from "./clinics-schema"
-export * from "./clinic-settings-schema"
+/**
+ * @file index.ts
+ *
+ * @description
+ * Barrel file that re-exports every Drizzle schema in `db/schema`.
+ * The order of exports is not important but keeping them alphabetical
+ * improves merge resolution.
+ */
+"use server"
+
+export * from "./organization-schema"
+export * from "./branches-schema"
+export * from "./branches-settings-schema"
 export * from "./consult-history-schema"
 export * from "./profiles-schema"
 export * from "./queue-items-schema"
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/clinics-schema.ts
-/**
- * @file clinics-schema.ts
- *
- * @description
- *  Drizzle ORM table definition for **`clinics`**—the top‑level tenant
- *  entity that owns queue items, settings, and analytics.
- *
- *  Every other domain table contains a `clinicId` FK that cascades on delete,
- *  allowing a single statement to purge all clinic‑scoped data if a clinic is
- *  removed from the platform.
- *
- * @columns
- *  - id          : Primary UUID identifier (generated server‑side)
- *  - name        : Human‑readable clinic name (required)
- *  - createdAt   : Record creation timestamp (default = now)
- *  - updatedAt   : Record update timestamp (auto‑updated on mutation)
- *
- * @notes
- *  - We **always** include an `updatedAt` column (project rule) even when
- *    it is not explicitly mentioned in the spec.
- *  - Indexing `name` is optional at this stage; query volume for clinic
- *    listing is expected to be low. We will add indexes when analytics
- *    warrants it.
- */
-
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
-
-export const clinicsTable = pgTable("clinics", {
-  /** Primary key — generated UUID */
-  id: uuid("id").defaultRandom().primaryKey(),
-
-  /** Display name of the clinic */
-  name: text("name").notNull(),
-
-  /** Record creation timestamp */
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-
-  /**
-   * Record last‑update timestamp
-   * Automatically updates on every mutation via `$onUpdate`.
-   */
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date())
-})
-
-/** Insert type for `clinicsTable` (used when creating a new clinic) */
-export type InsertClinic = typeof clinicsTable.$inferInsert
-
-/** Select type for `clinicsTable` (used when reading a clinic) */
-export type SelectClinic = typeof clinicsTable.$inferSelect
-
 
 File: /Users/dev/Desktop/project/qcare-mvp/app/q/[queueId]/page.tsx
 /**
@@ -5094,29 +4977,6 @@ async function handleCheckoutSession(event: Stripe.Event) {
 }
 
 
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
-/*
-This client page provides the signup form from Clerk.
-*/
-
-"use client"
-
-import { SignUp } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
-
-export default function SignUpPage() {
-  const { theme } = useTheme()
-
-  return (
-    <SignUp
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
-  )
-}
-
-
 File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
 /*
 This client page provides the login form from Clerk.
@@ -5133,6 +4993,29 @@ export default function LoginPage() {
 
   return (
     <SignIn
+      forceRedirectUrl="/"
+      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
+    />
+  )
+}
+
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
+/*
+This client page provides the signup form from Clerk.
+*/
+
+"use client"
+
+import { SignUp } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
+import { useTheme } from "next-themes"
+
+export default function SignUpPage() {
+  const { theme } = useTheme()
+
+  return (
+    <SignUp
       forceRedirectUrl="/"
       appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
     />
