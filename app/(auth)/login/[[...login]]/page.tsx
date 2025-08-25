@@ -13,8 +13,10 @@ export default function LoginPage() {
 
   return (
     <SignIn
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
+    forceRedirectUrl="/"
+    appearance={{
+      ...(theme === "dark" && { baseTheme: dark })
+    }}
+  />
   )
 }

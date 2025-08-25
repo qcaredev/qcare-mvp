@@ -13,8 +13,10 @@ export default function SignUpPage() {
 
   return (
     <SignUp
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
+  forceRedirectUrl="/"
+  appearance={{
+    ...(theme === "dark" && { baseTheme: dark })
+  }}
+/>
   )
 }

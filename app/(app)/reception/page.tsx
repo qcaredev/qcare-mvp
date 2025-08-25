@@ -1,5 +1,5 @@
 /**
- * @file app/reception/page.tsx
+ * @file app/(app)/reception/page.tsx
  * @description This file defines the server page for the reception dashboard.
  * It is responsible for fetching all necessary data for the Kanban view,
  * including the user's branch and the current list of patients in the queue.
@@ -13,8 +13,8 @@
 
 import { getProfileByUserIdAction } from "@/actions/db/profiles-actions"
 import { getQueueItemsByBranchAction } from "@/actions/db/queue_items_actions"
-import { QueueKanbanClient } from "./_components/queue-kanban-client"
-import { QueueKanbanSkeleton } from "./_components/queue-kanban-skeleton"
+import { QueueKanbanClient } from "@/app/(app)/reception/_components/queue-kanban-client"
+import { QueueKanbanSkeleton } from "@/app/(app)/reception/_components/queue-kanban-skeleton"
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -40,7 +40,7 @@ export default async function ReceptionPage() {
  * passes it down to the client component responsible for rendering and interactivity.
  */
 async function ReceptionDashboardFetcher() {
-  const { userId } = auth()
+  const { userId } = await auth() // FIX: Add 'await' here
   if (!userId) {
     redirect("/login")
   }
