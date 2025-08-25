@@ -8,11 +8,12 @@ const isPublicRoute = createRouteMatcher([
   "/contact",
   "/features",
   "/pricing",
-  "/q/(.*)", // Public patient tracking page (e.g., /q/some-id)
+  "/login(.*)", // Add the login route
+  "/signup(.*)", // Add the signup route
+  "/q/(.*)", 
   "/api/stripe/webhooks",
 ]);
 
-// Make the middleware function async
 export default clerkMiddleware(async (auth, request) => {
   // If the requested route is not public, check for authentication.
   if (!isPublicRoute(request)) {
