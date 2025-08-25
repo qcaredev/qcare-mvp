@@ -59,9 +59,9 @@ async function AdminDataFetcher() {
 
   return (
     <AdminDashboardClient
-      clinicId={MOCK_CLINIC_ID}
-      averageTimes={avgTimesResult.data}
-      clinicSettings={settingsResult.data}
+      branchId={MOCK_CLINIC_ID}
+      analyticsData={avgTimesResult.data}
+      settingsData={{ initialData: settingsResult.data }}
     />
   )
 }
