@@ -1,14 +1,17 @@
 /**
  * @file admin-dashboard-client.tsx
+ * @description The client-side component for the admin dashboard, displaying
+ * analytics cards and the settings management form.
  *
- * @description
- * This client component renders the main UI for the admin dashboard. It takes
- * the fetched analytics and settings data as props and displays it.
+ * @dependencies
+ * - `react`: For component logic.
+ * - `@/components/ui/*`: For UI components.
+ * - `@/db/schema`: For the `SelectBranchSettings` type.
+ * - `lucide-react`: For icons.
+ * - `./settings-form`: The form for updating clinic/branch settings.
  */
 "use client"
 
-import { exportConsultHistoryAction } from "@/actions/db/analytics-actions"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -16,100 +19,82 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card"
-import { SelectClinicSettings } from "@/db/schema"
+import { SelectBranchSettings } from "@/db/schema"
 import { Clock, Download, Hourglass, LineChart } from "lucide-react"
 import { toast } from "sonner"
 import { SettingsForm } from "./settings-form"
+import { exportConsultHistoryAction } from "@/actions/db/analytics-actions"
+import { Button } from "@/components/ui/button"
 
+// Define the shape of the props this component expects
 interface AdminDashboardClientProps {
-  clinicId: string
-  averageTimes: {
+  branchId: string
+  settingsData: {
+    initialData: SelectBranchSettings | null // Data can be null if not found
+  }
+  analyticsData: {
     avgWaitSeconds: number
     avgConsultSeconds: number
   }
-  clinicSettings: SelectClinicSettings | null
-}
-
-const formatSeconds = (seconds: number) => {
-  if (seconds < 60) return `${seconds} sec`
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-  return `${minutes} min ${remainingSeconds} sec`
 }
 
 export function AdminDashboardClient({
-  averageTimes,
-  clinicSettings,
-  clinicId
+  branchId,
+  settingsData,
+  analyticsData
 }: AdminDashboardClientProps) {
   const handleExport = async () => {
-    toast.info("Generating CSV file...")
+    toast.info("Generating CSV export...")
+    const result = await exportConsultHistoryAction(branchId)
 
-    const result = await exportConsultHistoryAction(clinicId)
-
-    if (!result.isSuccess) {
+    if (result.isSuccess) {
+      toast.success("CSV generated!")
+      // Create a blob from the CSV string and trigger a download
+      const blob = new Blob([result.data.csv], { type: "text/csv" })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `consult-history-${branchId}-${new Date().toISOString().split("T")[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } else {
       toast.error(result.message)
-      return
-    }
-
-    try {
-      const blob = new Blob([result.data.csv], { type: "text/csv;charset=utf-8;" })
-      const link = document.createElement("a")
-      const url = URL.createObjectURL(blob)
-      link.setAttribute("href", url)
-      link.setAttribute(
-        "download",
-        `qcare_consult_history_${new Date().toISOString().split("T")[0]}.csv`
-      )
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-      toast.success("CSV download started.")
-    } catch (error) {
-      console.error("Failed to trigger CSV download:", error)
-      toast.error("Failed to trigger CSV download.")
     }
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <Button onClick={handleExport}>
-          <Download className="mr-2 h-4 w-4" />
-          Download CSV
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Wait Time</CardTitle>
-            <Hourglass className="h-4 w-4 text-muted-foreground" />
+            <Clock className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatSeconds(averageTimes.avgWaitSeconds)}
+              {Math.round(analyticsData.avgWaitSeconds / 60)} min
             </div>
             <p className="text-xs text-muted-foreground">
-              Average for patients today
+              Average patient wait time today
             </p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Avg. Consultation Time
+              Avg. Consult Time
             </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Hourglass className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatSeconds(averageTimes.avgConsultSeconds)}
+              {Math.round(analyticsData.avgConsultSeconds / 60)} min
             </div>
             <p className="text-xs text-muted-foreground">
-              Average for patients today
+              Average consultation duration today
             </p>
           </CardContent>
         </Card>
@@ -118,27 +103,45 @@ export function AdminDashboardClient({
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Clinic Settings</CardTitle>
+            <CardTitle>Branch Settings</CardTitle>
             <CardDescription>
               Manage clinic-wide notification and language settings.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SettingsForm clinicId={clinicId} initialData={clinicSettings} />
+            {/* FIX: Check if initialData exists before rendering the form */}
+            {settingsData.initialData ? (
+              <SettingsForm initialData={settingsData.initialData} />
+            ) : (
+              <div className="flex h-24 items-center justify-center rounded-md border border-dashed">
+                <p className="text-sm text-muted-foreground">
+                  No settings found for this branch.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <LineChart className="mr-2 h-5 w-5" />
-              Wait Time Trends
-            </CardTitle>
-            <CardDescription>
-              Chart visualization of wait times over the past week (WIP).
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center">
+                  <LineChart className="mr-2 h-5 w-5" />
+                  Wait Time Trends
+                </CardTitle>
+                <CardDescription>
+                  Visualization of wait times over the past week (WIP).
+                </CardDescription>
+              </div>
+              <Button onClick={handleExport} variant="outline" size="sm">
+                <Download className="mr-2 size-4" />
+                Export Data
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="h-full flex items-center justify-center bg-muted/50 rounded-b-lg">
-            <p className="text-muted-foreground">
+          <CardContent className="flex h-full items-center justify-center rounded-lg bg-muted/50">
+            <p className="text-sm text-muted-foreground">
               Chart component will be rendered here.
             </p>
           </CardContent>
