@@ -7,12 +7,12 @@
  *
  * @columns
  * - id, branchId            : Identification & tenancy.
- * - patientName, phone      : Patient contact details.
- * - reason                  : Reason for visit / chief complaint.
- * - status (enum)           : WAITLIST | SERVING | COMPLETE | CANCELLED.
- * - position                : Integer ordering within WAITLIST.
- * - doctorId                : Optional textual identifier for doctor.
- * - createdAt / updatedAt   : Audit timestamps.
+ * - patientName, phone, age, etc. : Patient details.
+ * - reason                 : Reason for visit / chief complaint.
+ * - status (enum)          : WAITLIST | SERVING | COMPLETE | CANCELLED.
+ * - position               : Integer ordering within WAITLIST.
+ * - doctorId               : Optional textual identifier for doctor.
+ * - createdAt / updatedAt  : Audit timestamps.
  *
  * @relations
  * - FK branchId ➔ branches.id (ON DELETE CASCADE)
@@ -25,7 +25,7 @@ import {
   pgTable,
   text,
   timestamp,
-  uuid
+  uuid,
 } from "drizzle-orm/pg-core"
 import { branchesTable } from "./branches-schema"
 
@@ -34,7 +34,7 @@ export const queueStatusEnum = pgEnum("queue_status", [
   "WAITLIST",
   "SERVING",
   "COMPLETE",
-  "CANCELLED"
+  "CANCELLED",
 ])
 
 export const queueItemsTable = pgTable("queue_items", {
@@ -47,7 +47,11 @@ export const queueItemsTable = pgTable("queue_items", {
 
   /** Patient-facing fields */
   patientName: text("patient_name").notNull(),
-  phone: text("phone"), // Optional
+  phone: text("phone"),
+  age: integer("age"),
+  height: integer("height"), // in cm
+  weight: integer("weight"), // in kg
+  address: text("address"),
 
   /** Chief complaint / reason for visit */
   reason: text("reason"),
@@ -73,7 +77,7 @@ export const queueItemsTable = pgTable("queue_items", {
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .notNull()
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => new Date()),
 })
 
 /** Drizzle type for inserting a queue item */

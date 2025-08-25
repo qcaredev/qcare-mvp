@@ -43,8 +43,8 @@ type CreateQueueItemInput = Omit<
 >
 
 /**
- * The input type for registering a new patient, which is a subset of the
- * full queue item creation input.
+ * The input type for registering a new patient, which includes all the
+ * new fields from the registration form.
  */
 export interface RegisterPatientInput {
   patientName: string
@@ -52,6 +52,10 @@ export interface RegisterPatientInput {
   reason?: string | null
   branchId: string
   doctorId?: string | null
+  age?: number | null
+  height?: number | null
+  weight?: number | null
+  address?: string | null
 }
 
 /**

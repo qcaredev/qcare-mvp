@@ -27,11 +27,11 @@ import {
 import { SelectQueueItem, queueStatusEnum } from "@/db/schema"
 import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
-import QueueCard from "./queue_card"
 import { useQueueMutations } from "./use_queue_mutations"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase-client"
+import { QueueCard } from "./queue_card"
 
 export type GroupedQueueItems = {
   [key in (typeof queueStatusEnum.enumValues)[number]]?: SelectQueueItem[]

@@ -1,76 +1,76 @@
 /**
- * @file app/(app)/reception/page.tsx
- *
- * @description
- * This file defines the server page for the Reception Dashboard. It is responsible
- * for fetching the queue data specific to the logged-in receptionist's branch
- * and rendering the main Kanban-style queue management interface.
+ * @file app/reception/page.tsx
+ * @description This file defines the server page for the reception dashboard.
+ * It is responsible for fetching all necessary data for the Kanban view,
+ * including the user's branch and the current list of patients in the queue.
  *
  * @dependencies
- * - `next/cache`: For revalidating data paths.
- * - `react`: For component rendering and Suspense.
  * - `@clerk/nextjs/server`: For authenticating the user on the server.
- * - `@/actions/db/profiles-actions`: To fetch the user's profile and branch ID.
- * - `@/actions/db/queue_items_actions`: To fetch the patient queue.
- * - `./_components/reception-kanban-client`: The client component that renders the interactive Kanban board.
+ * - `actions/db/*`: To fetch profile and queue data.
+ * - `_components/*`: The client components for rendering the dashboard.
  */
 "use server"
 
-import { Suspense } from "react"
-import { auth } from "@clerk/nextjs/server"
 import { getProfileByUserIdAction } from "@/actions/db/profiles-actions"
 import { getQueueItemsByBranchAction } from "@/actions/db/queue_items_actions"
-import ReceptionKanbanClient from "./_components/reception_kanban_client"
+import { QueueKanbanClient } from "./_components/queue-kanban-client"
+import { QueueKanbanSkeleton } from "./_components/queue-kanban-skeleton"
+import { auth } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
+import { Suspense } from "react"
 
 /**
- * The primary server component for the `/reception` route.
- * It uses a Suspense boundary to show a loading state while fetching essential data.
+ * @function ReceptionPage
+ * @description The main server component for the `/reception` route. It handles
+ * data fetching for the entire dashboard.
  */
 export default async function ReceptionPage() {
   return (
-    <div className="flex h-full flex-col p-4">
-      <h1 className="mb-4 text-2xl font-bold">Reception Dashboard</h1>
-      <Suspense fallback={<p>Loading queue...</p>}>
-        <QueueDataFetcher />
+    <div className="h-full w-full">
+      <Suspense fallback={<QueueKanbanSkeleton />}>
+        <ReceptionDashboardFetcher />
       </Suspense>
     </div>
   )
 }
 
 /**
- * An asynchronous server component responsible for the complete data fetching
- * logic for the reception dashboard. It authenticates the user, finds their
- * branch, and fetches the corresponding patient queue.
- *
- * @notes
- * - This pattern keeps data fetching logic cleanly separated on the server.
- * - It provides robust error handling for common failure scenarios.
+ * @function ReceptionDashboardFetcher
+ * @description An async server component that fetches all required data and
+ * passes it down to the client component responsible for rendering and interactivity.
  */
-async function QueueDataFetcher() {
-  // 1. Authenticate the user and get their ID.
+async function ReceptionDashboardFetcher() {
   const { userId } = auth()
   if (!userId) {
-    return <p className="text-red-500">Error: Not authenticated.</p>
+    redirect("/login")
   }
 
-  // 2. Fetch the user's profile to determine their assigned branch.
   const profileResult = await getProfileByUserIdAction(userId)
   if (!profileResult.isSuccess || !profileResult.data) {
     return (
-      <p className="text-red-500">
-        Error: Could not find a user profile. Please contact an administrator.
-      </p>
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-red-500">
+          Could not load user profile. Please contact support.
+        </p>
+      </div>
     )
   }
-  const { branchId } = profileResult.data
 
-  // 3. Fetch the queue items specifically for that branch.
-  const queueResult = await getQueueItemsByBranchAction(branchId)
-  if (!queueResult.isSuccess) {
-    return <p className="text-red-500">Error: {queueResult.message}</p>
+  const { branchId } = profileResult.data
+  const queueItemsResult = await getQueueItemsByBranchAction(branchId)
+
+  if (!queueItemsResult.isSuccess) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-red-500">{queueItemsResult.message}</p>
+      </div>
+    )
   }
 
-  // 4. Pass the fetched data to the client component for rendering.
-  return <ReceptionKanbanClient initialQueueItems={queueResult.data} />
+  return (
+    <QueueKanbanClient
+      branchId={branchId}
+      initialQueueItems={queueItemsResult.data}
+    />
+  )
 }
-

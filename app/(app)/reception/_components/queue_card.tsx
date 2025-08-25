@@ -1,140 +1,147 @@
 /**
  * @file queue-card.tsx
+ * @description A client component that renders a card for a single patient in the queue.
+ * It is a draggable component and now includes action buttons to modify patient status.
  *
- * @description
- * This client component renders a single patient card for the Kanban board.
- * It displays essential patient information and provides action buttons that
- * trigger callback functions passed down as props.
+ * @dependencies
+ * - All previous dependencies plus `lucide-react` for new icons.
  */
 "use client"
 
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { SelectQueueItem } from "@/db/schema"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import {
+  Bell,
+  Check,
+  GripVertical,
+  MessageSquareText,
+  User,
+  X
+} from "lucide-react"
 import { cn } from "@/lib/utils"
-import { formatDistanceToNow } from "date-fns"
-import { Bell, Check, User, X } from "lucide-react"
-import { useEffect, useState } from "react"
-
-// This component safely renders a relative time string on the client
-// to prevent hydration mismatch errors.
-function RelativeTime({ date }: { date: Date | string | null | undefined }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted || !date) {
-    return null // Don't render on the server or if date is null
-  }
-
-  // This will only run on the client
-  return <>{formatDistanceToNow(new Date(date), { addSuffix: true })}</>
-}
 
 interface QueueCardProps {
   item: SelectQueueItem
-  onAdvance: (id: string) => void
-  onCancel: (id: string) => void
-  onNotify: (id: string) => void
   isOverlay?: boolean
+  onAdvance: (
+    id: string,
+    currentStatus: SelectQueueItem["status"]
+  ) => void
+  onCancel: (id: string) => void
+  onNotify: (phone: string, name: string) => void
 }
 
-export default function QueueCard({
+export function QueueCard({
   item,
+  isOverlay,
   onAdvance,
   onCancel,
-  onNotify,
-  isOverlay
+  onNotify
 }: QueueCardProps) {
-  const handleAdvanceClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent dnd-kit from capturing the click
-    onAdvance(item.id)
-  }
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: item.id, data: { item } })
 
-  const handleCancelClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onCancel(item.id)
-  }
-
-  const handleNotifyClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onNotify(item.id)
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1
   }
 
   return (
     <Card
+      ref={setNodeRef}
+      style={style}
       className={cn(
-        "mb-4 touch-none shadow-sm transition-shadow hover:shadow-md",
-        isOverlay && "ring-primary ring-2"
+        "bg-card shadow-sm",
+        isOverlay && "shadow-lg shadow-primary/50"
       )}
     >
-      <CardHeader className="p-4 pb-2">
-        <CardTitle className="flex cursor-grab items-center justify-between text-base font-bold">
-          <span>{item.patientName}</span>
-          {item.position !== null && item.position >= 0 && (
-            <span className="text-muted-foreground text-sm font-normal">
-              #{item.position + 1}
-            </span>
+      <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
+        <div>
+          <CardTitle className="text-base font-bold">{item.patientName}</CardTitle>
+          {item.status === "WAITLIST" && (
+            <CardDescription>Position: #{item.position + 1}</CardDescription>
           )}
-        </CardTitle>
+        </div>
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab p-1"
+          aria-label="Drag handle"
+        >
+          <GripVertical className="text-muted-foreground" size={20} />
+        </div>
       </CardHeader>
 
-      <CardContent className="space-y-2 px-4 pb-2">
+      <CardContent className="space-y-2 p-4 pt-0">
         {item.reason && (
-          <p className="text-muted-foreground text-sm">{item.reason}</p>
+          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+            <MessageSquareText size={16} className="mt-0.5 shrink-0" />
+            <span>{item.reason}</span>
+          </div>
         )}
-
         {item.doctorId && (
-          <div className="text-muted-foreground flex items-center text-xs">
-            <User className="mr-1.5 size-3" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User size={16} className="shrink-0" />
             <span>Dr. {item.doctorId}</span>
           </div>
         )}
-
-        <p className="text-muted-foreground pt-1 text-xs">
-          Waiting: <RelativeTime date={item.createdAt} />
-        </p>
       </CardContent>
 
       <CardFooter className="flex justify-between p-2 pt-0">
-        <div>
+        {item.status === "WAITLIST" && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onNotify(item.phone!, item.patientName)}
+              disabled={!item.phone}
+            >
+              <Bell className="mr-2 size-4" />
+              Notify
+            </Button>
+            <Button size="sm" onClick={() => onAdvance(item.id, item.status)}>
+              <Check className="mr-2 size-4" />
+              Advance
+            </Button>
+          </>
+        )}
+        {item.status === "SERVING" && (
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={() => onAdvance(item.id, item.status)}
+          >
+            <Check className="mr-2 size-4" />
+            Mark Complete
+          </Button>
+        )}
+        {(item.status === "WAITLIST" || item.status === "SERVING") && (
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleNotifyClick}
-            disabled={!item.phone}
-            title={item.phone ? "Send Reminder" : "No phone number available"}
+            className="text-destructive"
+            onClick={() => onCancel(item.id)}
           >
-            <Bell className="size-4" />
+            <X className="size-4" />
           </Button>
-        </div>
-
-        <div className="space-x-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCancelClick}
-            title="Cancel Appointment"
-          >
-            <X className="text-destructive size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleAdvanceClick}
-            title="Advance to Next Stage"
-          >
-            <Check className="size-5 text-green-600" />
-          </Button>
-        </div>
+        )}
       </CardFooter>
     </Card>
   )

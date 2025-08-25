@@ -1,21 +1,18 @@
 /**
  * @file patient-registration-form.tsx
  * @description This client component provides a dialog form for receptionists
- * to register new patients. It handles form state, validation, and calls the
- * server action to add the patient to the queue.
+ * to register new patients. It now includes more patient details and is fully
+ * wired up to the backend server action.
  *
  * @dependencies
- * - `react`, `react-hook-form`, `zod`, `@hookform/resolvers/zod`: For form management and validation.
- * - `lucide-react`: For icons.
- * - `@/components/ui/*`: For UI components from shadcn/ui.
- * - `actions/db/queue-items-actions`: For the server action to register a patient.
- * - `sonner`: For displaying toast notifications.
+ * - All previous dependencies.
+ * - `actions/db/queue-items-actions`: For the `registerPatientAction`.
  */
 "use client"
 
 import {
   RegisterPatientInput,
-  registerPatientAction
+  registerPatientAction,
 } from "@/actions/db/queue_items_actions"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +21,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Form,
@@ -32,9 +29,10 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { PlusCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -43,24 +41,27 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 
-// Props for the component, requiring the branchId for the server action.
 interface PatientRegistrationFormProps {
   branchId: string
 }
 
-// Zod schema for form validation.
+// Zod schema updated with new fields and coercion for numeric inputs.
 const formSchema = z.object({
   patientName: z.string().min(2, {
-    message: "Patient name must be at least 2 characters."
+    message: "Patient name must be at least 2 characters.",
   }),
   phone: z.string().optional(),
-  reason: z.string().optional()
+  reason: z.string().optional(),
+  age: z.coerce.number().int().positive().optional(),
+  height: z.coerce.number().int().positive().optional(),
+  weight: z.coerce.number().positive().optional(),
+  address: z.string().optional(),
 })
 
 type PatientFormValues = z.infer<typeof formSchema>
 
 export function PatientRegistrationForm({
-  branchId
+  branchId,
 }: PatientRegistrationFormProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -71,29 +72,28 @@ export function PatientRegistrationForm({
     defaultValues: {
       patientName: "",
       phone: "",
-      reason: ""
-    }
+      reason: "",
+    },
   })
 
   /**
    * @function onSubmit
-   * @description Handles the form submission logic. It calls the server action
-   * and provides user feedback.
+   * @description Handles the form submission by calling the server action.
    * @param {PatientFormValues} values - The validated form data.
    */
   const onSubmit = (values: PatientFormValues) => {
     startTransition(async () => {
       const data: RegisterPatientInput = {
         ...values,
-        branchId
+        branchId,
       }
 
       const result = await registerPatientAction(data)
 
       if (result.isSuccess) {
         toast.success(result.message)
-        setIsOpen(false) // Close the dialog on success
-        form.reset() // Reset form for the next entry
+        setIsOpen(false)
+        form.reset()
         router.refresh() // Refresh server components to show the new patient
       } else {
         toast.error(result.message)
@@ -110,7 +110,7 @@ export function PatientRegistrationForm({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Register New Patient</DialogTitle>
           <DialogDescription>
@@ -119,13 +119,16 @@ export function PatientRegistrationForm({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid grid-cols-2 gap-4"
+          >
             <FormField
               control={form.control}
               name="patientName"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Patient Name</FormLabel>
+                <FormItem className="col-span-2">
+                  <FormLabel>Patient Name*</FormLabel>
                   <FormControl>
                     <Input placeholder="John Doe" {...field} />
                   </FormControl>
@@ -138,10 +141,24 @@ export function PatientRegistrationForm({
               control={form.control}
               name="phone"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>WhatsApp Number (Optional)</FormLabel>
+                <FormItem className="col-span-2">
+                  <FormLabel>WhatsApp Number</FormLabel>
                   <FormControl>
                     <Input placeholder="+919876543210" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="age"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Age</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="35" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -153,7 +170,7 @@ export function PatientRegistrationForm({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason for Visit (Optional)</FormLabel>
+                  <FormLabel>Chief Complaint</FormLabel>
                   <FormControl>
                     <Input placeholder="Fever, cough" {...field} />
                   </FormControl>
@@ -162,7 +179,53 @@ export function PatientRegistrationForm({
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <FormField
+              control={form.control}
+              name="height"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Height (cm)</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="170" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="weight"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weight (kg)</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="75" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="123 Main St..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
+              className="col-span-2 w-full"
+              disabled={isPending}
+            >
               {isPending ? "Registering..." : "Register Patient"}
             </Button>
           </form>
