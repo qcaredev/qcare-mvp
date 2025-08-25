@@ -73,3 +73,4 @@ async function QueueDataFetcher() {
   // 4. Pass the fetched data to the client component for rendering.
   return <ReceptionKanbanClient initialQueueItems={queueResult.data} />
 }
+

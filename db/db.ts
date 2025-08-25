@@ -8,7 +8,6 @@
  * @notes
  * - Migrations are NOT generated here. Follow user instructions to run `drizzle-kit`.
  */
-"use server"
 
 import {
   branchesTable,
