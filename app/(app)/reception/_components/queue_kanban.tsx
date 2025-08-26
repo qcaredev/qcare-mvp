@@ -2,16 +2,14 @@
  * @file queue-kanban.tsx
  *
  * @description
- * This client component renders the main Kanban-style board for the reception
- * dashboard. It now includes the QueueCard definition locally to resolve
- * persistent type errors and manages all drag-and-drop interactions.
+ * This client component renders the main Kanban-style board. The real-time
+ * logic has been simplified to use `router.refresh()` for robustness.
  */
 "use client"
 
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle
@@ -34,7 +32,6 @@ import {
 import { arrayMove } from "@dnd-kit/sortable"
 import {
   RealtimeChannel,
-  RealtimePostgresChangesPayload
 } from "@supabase/supabase-js"
 import { SelectQueueItem, queueStatusEnum } from "@/db/schema"
 import { useEffect, useMemo, useState } from "react"
@@ -48,10 +45,9 @@ import {
   User,
   X
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 // --- Merged QueueCard Component ---
-// By defining QueueCard here, we ensure the props are always in sync.
-
 interface QueueCardProps {
   item: SelectQueueItem
   onAdvance: (id: string) => void
@@ -117,13 +113,36 @@ export default function QueueKanban({ initialData }: QueueKanbanProps) {
   const [items, setItems] = useState<GroupedQueueItems>(initialData)
   const [activeItem, setActiveItem] = useState<SelectQueueItem | null>(null)
   const [isMounted, setIsMounted] = useState(false)
+  const router = useRouter() // Get the router instance
 
   const { updateStatusMutation, reorderQueueMutation } = useQueueMutations()
 
   useEffect(() => {
     setIsMounted(true)
-    // ... (rest of your useEffect logic for realtime updates)
-  }, [])
+
+    // FIX: Simplified and more robust real-time logic
+    const channel: RealtimeChannel = supabase
+      .channel("queue-updates")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "queue_items" },
+        (payload) => {
+          console.log("Real-time change received, refreshing data...", payload)
+          // This one line replaces all the complex manual state logic
+          router.refresh()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [router])
+  
+  // Update local state when the server provides new data after a refresh
+  useEffect(() => {
+    setItems(initialData)
+  }, [initialData])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -147,6 +166,7 @@ export default function QueueKanban({ initialData }: QueueKanbanProps) {
     if (!activeContainer || !overContainer) return
 
     if (activeContainer === overContainer) {
+      // Logic for reordering is unchanged
       const currentItems = items[activeContainer]!
       const activeIndex = currentItems.findIndex(i => i.id === activeId)
       const overIndex = currentItems.findIndex(i => i.id === over.id)
@@ -160,6 +180,7 @@ export default function QueueKanban({ initialData }: QueueKanbanProps) {
         reorderQueueMutation(itemsToUpdate)
       }
     } else {
+      // Logic for status change is unchanged
       updateStatusMutation(activeId, overContainer)
     }
   }
@@ -213,7 +234,7 @@ export default function QueueKanban({ initialData }: QueueKanbanProps) {
           ))}
         </QueueColumn>
       )),
-    [items]
+    [items, handleAdvance, handleCancel, handleNotify]
   )
 
   return (
@@ -266,7 +287,8 @@ function QueueColumn({
       <h3 className="text-md text-foreground px-2 font-semibold capitalize tracking-tight">
         {title.toLowerCase()}
       </h3>
-      <div className="grow space-y-2 overflow-y-auto p-1">{children}</div>
+      // FIX: Add a minimum height to ensure empty columns are always droppable
+      <div className="grow space-y-2 overflow-y-auto p-1 min-h-[1000px]">{children}</div>
     </div>
   )
 }

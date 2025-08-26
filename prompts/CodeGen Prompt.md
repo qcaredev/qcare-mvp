@@ -1889,291 +1889,348 @@ The plan proceeds from foundational setup through back‑end schema & actions, t
 
 <file_map>
 /Users/dev/Desktop/project/qcare-mvp
+├── .eslintrc.json *
+├── .gitignore *
+├── components.json *
+├── drizzle.config.ts *
+├── license *
+├── middleware.ts *
+├── next.config.mjs *
+├── package.json *
+├── postcss.config.mjs *
+├── prettier.config.cjs *
+├── tailwind.config.ts *
+└── tsconfig.json *
 ├── actions
+│   ├── stripe-actions.ts *
+│   └── twilio-actions.ts *
 │   ├── db
-│   │   ├── analytics-actions.ts
-│   │   ├── consult_history_actions.ts
-│   │   ├── profiles-actions.ts
-│   │   └── queue_items_actions.ts
-│   ├── stripe-actions.ts
-│   └── twilio-actions.ts
+│   │   ├── analytics-actions.ts *
+│   │   ├── consult_history_actions.ts *
+│   │   ├── profiles-actions.ts *
+│   │   └── queue_items_actions.ts *
 ├── app
+│   ├── globals.css *
+│   └── layout.tsx *
 │   ├── (auth)
+│   │   └── layout.tsx *
 │   │   ├── login
 │   │   │   └── [[...login]]
-│   │   │       └── page.tsx
+│   │   │       └── page.tsx *
 │   │   ├── signup
 │   │   │   └── [[...signup]]
-│   │   │       └── page.tsx
-│   │   └── layout.tsx
+│   │   │       └── page.tsx *
 │   ├── api
 │   │   └── stripe
 │   │       └── webhooks
-│   │           └── route.ts
+│   │           └── route.ts *
 │   ├── q
 │   │   └── [queueId]
+│   │       └── page.tsx *
 │   │       ├── _components
-│   │       │   └── patient-queue-view.tsx
-│   │       └── page.tsx
-│   ├── globals.css
-│   └── layout.tsx
+│   │       │   └── patient-queue-view.tsx *
 ├── components
 │   ├── landing
-│   │   ├── footer.tsx
-│   │   ├── header.tsx
-│   │   └── hero.tsx
+│   │   ├── footer.tsx *
+│   │   ├── header.tsx *
+│   │   └── hero.tsx *
 │   ├── magicui
-│   │   ├── animated-gradient-text.tsx
-│   │   └── hero-video-dialog.tsx
+│   │   ├── animated-gradient-text.tsx *
+│   │   └── hero-video-dialog.tsx *
 │   └── utilities
-│       ├── providers.tsx
-│       ├── tailwind-indicator.tsx
-│       └── theme-switcher.tsx
+│       ├── providers.tsx *
+│       ├── tailwind-indicator.tsx *
+│       └── theme-switcher.tsx *
 ├── db
+│   └── db.ts *
 │   ├── schema
-│   │   ├── consult-history-schema.ts
-│   │   ├── index.ts
-│   │   ├── profiles-schema.ts
-│   │   └── queue-items-schema.ts
-│   └── db.ts
+│   │   ├── consult-history-schema.ts *
+│   │   ├── index.ts *
+│   │   ├── profiles-schema.ts *
+│   │   └── queue-items-schema.ts *
 ├── lib
+│   ├── stripe.ts *
+│   ├── supabase-client.ts *
+│   └── utils.ts *
 │   ├── hooks
-│   │   ├── use-copy-to-clipboard.tsx
-│   │   ├── use-mobile.tsx
-│   │   └── use-toast.ts
-│   ├── stripe.ts
-│   ├── supabase-client.ts
-│   └── utils.ts
+│   │   ├── use-copy-to-clipboard.tsx *
+│   │   ├── use-mobile.tsx *
+│   │   └── use-toast.ts *
 ├── types
-│   ├── index.ts
-│   └── server-action-types.ts
-├── .eslintrc.json
-├── .gitignore
-├── components.json
-├── drizzle.config.ts
-├── license
-├── middleware.ts
-├── next.config.mjs
-├── package.json
-├── postcss.config.mjs
-├── prettier.config.cjs
-├── tailwind.config.ts
-└── tsconfig.json
-
+│   ├── index.ts *
+│   └── server-action-types.ts *
 </file_map>
 
 <file_contents>
-File: /Users/dev/Desktop/project/qcare-mvp/middleware.ts
-import { authMiddleware } from "@clerk/nextjs/server";
+File: /Users/dev/Desktop/project/qcare-mvp/app/layout.tsx
+```tsx
+import { ClerkProvider } from "@clerk/nextjs"
+import { Inter } from "next/font/google"
+import type { Metadata } from "next"
 
-// This is the simplest and most robust way to configure Clerk middleware for the packages we've installed.
-// It protects all routes by default.
-// Public routes are exempted via the publicRoutes array.
-export default authMiddleware({
-  publicRoutes: [
-    "/",
-    "/about",
-    "/contact",
-    "/features",
-    "/pricing",
-    "/q/(.*)", // Public patient tracking page (e.g., /q/some-id)
-    "/api/stripe/webhooks",
-  ],
-});
+import { Toaster } from "@/components/ui/sonner"
+import { Providers } from "@/components/utilities/providers"
+import { TailwindIndicator } from "@/components/utilities/tailwind-indicator"
+import { cn } from "@/lib/utils"
+import "./globals.css"
 
-export const config = {
-  // The matcher ensures that the middleware runs on all routes except for
-  // static assets and Next.js-specific paths.
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
-};
+const inter = Inter({ subsets: ["latin"] })
 
+export const metadata: Metadata = {
+  title: "QCare",
+  description: "A real-time queue management system.",
+}
 
-File: /Users/dev/Desktop/project/qcare-mvp/license
-MIT License
+export default function RootLayout({
+  children
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={cn(
+            "min-h-screen bg-background font-sans antialiased",
+            inter.className
+          )}
+        >
+          <Providers
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster />
+            <TailwindIndicator />
+          </Providers>
+        </body>
+      </html>
+    </ClerkProvider>
+  )
+}
 
-Copyright (c) 2025 Mckay Wrigley
+```
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+File: /Users/dev/Desktop/project/qcare-mvp/components.json
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/lib/hooks"
+  }
+}
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+```
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+File: /Users/dev/Desktop/project/qcare-mvp/actions/db/analytics-actions.ts
+```ts
+/**
+ * @file analytics-actions.ts
+ *
+ * @description
+ * This file contains server actions dedicated to fetching and processing
+ * analytics data from the `consult_history` table. These actions are designed
+ * to be called from the Admin Dashboard and are scoped by branch.
+ */
+"use server"
 
-File: /Users/dev/Desktop/project/qcare-mvp/postcss.config.mjs
-/*
-Configures PostCSS for the app.
-*/
+import { db } from "@/db/db"
+import { consultHistoryTable, SelectConsultHistory } from "@/db/schema"
+import { ActionState } from "@/types"
+import { and, avg, desc, eq, gte } from "drizzle-orm"
+import { startOfDay, subDays } from "date-fns"
+import { stringify } from "csv-stringify" // Corrected import
 
-/** @type {import('postcss-load-config').Config} */
-const config = { plugins: { tailwindcss: {} } }
+interface AverageTimes {
+  avgWaitSeconds: number
+  avgConsultSeconds: number
+}
 
-export default config
+export async function getDailyAverageWaitTimesAction(
+  branchId: string
+): Promise<ActionState<AverageTimes>> {
+  try {
+    const todayStart = startOfDay(new Date())
 
+    const [result] = await db
+      .select({
+        avgWait: avg(consultHistoryTable.waitDurationSeconds),
+        avgConsult: avg(consultHistoryTable.consultDurationSeconds)
+      })
+      .from(consultHistoryTable)
+      .where(
+        and(
+          eq(consultHistoryTable.branchId, branchId),
+          gte(consultHistoryTable.createdAt, todayStart)
+        )
+      )
 
-File: /Users/dev/Desktop/project/qcare-mvp/next.config.mjs
-/*
-Configures Next.js for the app.
-*/
-
-/** @type {import('next').NextConfig} */
-const nextConfig = { images: { remotePatterns: [{ hostname: "localhost" }] } }
-
-export default nextConfig
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/tailwind.config.ts
-/*
-Configures Tailwind CSS for the app.
-*/
-
-import type { Config } from "tailwindcss"
-
-const config = {
-  darkMode: ["class"],
-  content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}"
-  ],
-  prefix: "",
-  theme: {
-    container: { center: true, padding: "2rem", screens: { "2xl": "1400px" } },
-    extend: {
-      colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))"
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))"
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))"
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))"
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))"
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))"
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))"
-        },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))"
-        }
-      },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)"
-      },
-      keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" }
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" }
-        },
-        gradient: { to: { backgroundPosition: "var(--bg-size) 0" } }
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        gradient: "gradient 8s linear infinite"
+    return {
+      isSuccess: true,
+      message: "Daily average times retrieved successfully.",
+      data: {
+        avgWaitSeconds: result.avgWait
+          ? Math.round(parseFloat(result.avgWait))
+          : 0,
+        avgConsultSeconds: result.avgConsult
+          ? Math.round(parseFloat(result.avgConsult))
+          : 0
       }
     }
-  },
-  plugins: [
-    require("tailwindcss-animate"),
-    require("@tailwindcss/typography"),
-    require("@tailwindcss/postcss")
-  ]
-} satisfies Config
+  } catch (error) {
+    console.error("Error getting daily average wait times:", error)
+    return {
+      isSuccess: false,
+      message: "Failed to retrieve daily average wait times."
+    }
+  }
+}
 
-export default config
+export async function getConsultHistoryForExportAction(
+  branchId: string
+): Promise<ActionState<SelectConsultHistory[]>> {
+  try {
+    const thirtyDaysAgo = subDays(new Date(), 30)
 
+    const history = await db.query.consultHistory.findMany({
+      where: and(
+        eq(consultHistoryTable.branchId, branchId),
+        gte(consultHistoryTable.createdAt, thirtyDaysAgo)
+      ),
+      orderBy: [desc(consultHistoryTable.createdAt)]
+    })
 
-File: /Users/dev/Desktop/project/qcare-mvp/.gitignore
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+    return {
+      isSuccess: true,
+      message: "Consultation history for export retrieved successfully.",
+      data: history
+    }
+  } catch (error) {
+    console.error("Error getting consultation history for export:", error)
+    return {
+      isSuccess: false,
+      message: "Failed to retrieve consultation history for export."
+    }
+  }
+}
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-.yarn/install-state.gz
+/**
+ * @function exportConsultHistoryAction
+ * @description Fetches consultation history for a branch and converts it to a CSV string.
+ * @param {string} branchId - The UUID of the branch.
+ * @returns {Promise<ActionState<{ csv: string }>>} The generated CSV content.
+ */
+export async function exportConsultHistoryAction(
+  branchId: string
+): Promise<ActionState<{ csv: string }>> {
+  const historyResult = await getConsultHistoryForExportAction(branchId)
 
-# testing
-/coverage
+  if (!historyResult.isSuccess) {
+    return historyResult
+  }
 
-# next.js
-/.next/
-/out/
+  if (historyResult.data.length === 0) {
+    return { isSuccess: false, message: "No history to export." }
+  }
 
-# production
-/build
+  try {
+    const csvString = await new Promise<string>((resolve, reject) => {
+      stringify(
+        historyResult.data,
+        { header: true },
+        (err, stringified) => {
+          if (err) {
+            return reject(err)
+          }
+          if (stringified) {
+            return resolve(stringified)
+          }
+          return reject(
+            new Error("CSV stringification resulted in undefined value.")
+          )
+        }
+      )
+    })
 
-# misc
-.DS_Store
-*.pem
+    return {
+      isSuccess: true,
+      message: "CSV content generated successfully.",
+      data: { csv: csvString }
+    }
+  } catch (error) {
+    console.error("Error generating CSV string:", error)
+    return { isSuccess: false, message: "Failed to generate CSV." }
+  }
+}
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+```
 
-# local env files
-.env*.local
-.env*.example
+File: /Users/dev/Desktop/project/qcare-mvp/lib/utils.ts
+```ts
+/*
+Contains the utility functions for the app.
+*/
 
-# vercel
-.vercel
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
-# clerk configuration (can include secrets)
-/.clerk/
+```
 
+File: /Users/dev/Desktop/project/qcare-mvp/lib/supabase-client.ts
+```ts
+/**
+ * @file supabase-client.ts
+ *
+ * @description
+ * This file creates and exports a client-side Supabase client instance.
+ * This instance is intended for use in client components, particularly for
+ * setting up real-time data subscriptions. It uses public environment
+ * variables and relies on Supabase's Row Level Security (RLS) for data protection.
+ *
+ * This is created as a singleton to ensure that only one instance of the
+ * Supabase client is used throughout the application on the client side.
+ *
+ * @dependencies
+ * - `@supabase/supabase-js`: The official JavaScript library for Supabase.
+ *
+ * @configuration
+ * Requires the following public environment variables to be set in `.env.local`:
+ * - `NEXT_PUBLIC_SUPABASE_URL`: The URL of your Supabase project.
+ * - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: The public "anonymous" key for your project.
+ */
+
+import { createClient } from "@supabase/supabase-js"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+// Create and export the client-side Supabase client
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+```
 
 File: /Users/dev/Desktop/project/qcare-mvp/package.json
+```json
 {
   "name": "qcare-ai",
   "version": "0.1.0",
@@ -2196,8 +2253,8 @@ File: /Users/dev/Desktop/project/qcare-mvp/package.json
   },
   "dependencies": {
     "@clerk/backend": "^1.24.0",
-    "@clerk/nextjs": "^5.7.5",
-    "@clerk/themes": "^2.2.17",
+    "@clerk/nextjs": "^6.31.4",
+    "@clerk/themes": "^2.4.13",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^8.0.0",
     "@hookform/resolvers": "^4.0.0",
@@ -2277,74 +2334,386 @@ File: /Users/dev/Desktop/project/qcare-mvp/package.json
   }
 }
 
+```
 
-File: /Users/dev/Desktop/project/qcare-mvp/prettier.config.cjs
+File: /Users/dev/Desktop/project/qcare-mvp/app/api/stripe/webhooks/route.ts
+```ts
 /*
-Configures Prettier for the app.
+This API route handles Stripe webhook events to manage subscription status changes and updates user profiles accordingly.
 */
 
-/** @type {import('prettier').Config} */
-module.exports = {
-  endOfLine: "lf",
-  semi: false,
-  useTabs: false,
-  singleQuote: false,
-  arrowParens: "avoid",
-  tabWidth: 2,
-  trailingComma: "none",
-  importOrder: [
-    "^.+\\.scss$",
-    "^.+\\.css$",
-    "^(react/(.*)$)|^(react$)",
-    "^(next/(.*)$)|^(next$)",
-    "<THIRD_PARTY_MODULES>",
-    "",
-    "^types$",
-    "^@/types/(.*)$",
-    "^@/config/(.*)$",
-    "^@/lib/(.*)$",
-    "^@/hooks/(.*)$",
-    "^@/components/ui/(.*)$",
-    "^@/components/(.*)$",
-    "^@/registry/(.*)$",
-    "^@/styles/(.*)$",
-    "^@/app/(.*)$",
-    "",
-    "^[./]"
-  ],
-  importOrderSeparation: false,
-  importOrderSortSpecifiers: true,
-  importOrderBuiltinModulesToTop: true,
-  importOrderParserPlugins: ["typescript", "jsx", "decorators-legacy"],
-  importOrderMergeDuplicateImports: true,
-  importOrderCombineTypeAndValueImports: true
+import {
+  manageSubscriptionStatusChange,
+  updateStripeCustomer
+} from "@/actions/stripe-actions"
+import { stripe } from "@/lib/stripe"
+import { headers } from "next/headers"
+import Stripe from "stripe"
+
+const relevantEvents = new Set([
+  "checkout.session.completed",
+  "customer.subscription.updated",
+  "customer.subscription.deleted"
+])
+
+export async function POST(req: Request) {
+  const body = await req.text()
+  const sig = (await headers()).get("Stripe-Signature") as string
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  let event: Stripe.Event
+
+  try {
+    if (!sig || !webhookSecret) {
+      throw new Error("Webhook secret or signature missing")
+    }
+
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
+  } catch (err: any) {
+    console.error(`Webhook Error: ${err.message}`)
+    return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+  }
+
+  if (relevantEvents.has(event.type)) {
+    try {
+      switch (event.type) {
+        case "customer.subscription.updated":
+        case "customer.subscription.deleted":
+          await handleSubscriptionChange(event)
+          break
+
+        case "checkout.session.completed":
+          await handleCheckoutSession(event)
+          break
+
+        default:
+          throw new Error("Unhandled relevant event!")
+      }
+    } catch (error) {
+      console.error("Webhook handler failed:", error)
+      return new Response(
+        "Webhook handler failed. View your nextjs function logs.",
+        { status: 400 }
+      )
+    }
+  }
+
+  return new Response(JSON.stringify({ received: true }))
 }
 
+async function handleSubscriptionChange(event: Stripe.Event) {
+  const subscription = event.data.object as Stripe.Subscription
+  const productId = subscription.items.data[0].price.product as string
+  await manageSubscriptionStatusChange(
+    subscription.id,
+    subscription.customer as string,
+    productId
+  )
+}
 
-File: /Users/dev/Desktop/project/qcare-mvp/components.json
-{
-  "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "default",
-  "rsc": true,
-  "tsx": true,
-  "tailwind": {
-    "config": "tailwind.config.ts",
-    "css": "app/globals.css",
-    "baseColor": "neutral",
-    "cssVariables": true,
-    "prefix": ""
-  },
-  "aliases": {
-    "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
-    "lib": "@/lib",
-    "hooks": "@/lib/hooks"
+async function handleCheckoutSession(event: Stripe.Event) {
+  const checkoutSession = event.data.object as Stripe.Checkout.Session
+  if (checkoutSession.mode === "subscription") {
+    const subscriptionId = checkoutSession.subscription as string
+    await updateStripeCustomer(
+      checkoutSession.client_reference_id as string,
+      subscriptionId,
+      checkoutSession.customer as string
+    )
+
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ["default_payment_method"]
+    })
+
+    const productId = subscription.items.data[0].price.product as string
+    await manageSubscriptionStatusChange(
+      subscription.id,
+      subscription.customer as string,
+      productId
+    )
   }
 }
 
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/actions/twilio-actions.ts
+```ts
+/**
+ * @file twilio-actions.ts
+ *
+ * @description
+ * Server actions for interacting with the Twilio API. This has been updated
+ * to support sending both free-form and templated WhatsApp messages.
+ */
+"use server"
+
+import { ActionState } from "@/types"
+import twilio from "twilio"
+
+const accountSid = process.env.TWILIO_SID
+const authToken = process.env.TWILIO_AUTH_TOKEN
+const fromNumber = process.env.TWILIO_WHATSAPP_FROM
+
+const client = twilio(accountSid, authToken)
+
+interface SendWhatsAppMessageInput {
+  to: string
+  body?: string // For free-form messages (replies within 24h)
+  contentSid?: string // For templates
+  contentVariables?: { [key: string]: string } // For template placeholders
+}
+
+export async function sendWhatsAppMessageAction({
+  to,
+  body,
+  contentSid,
+  contentVariables
+}: SendWhatsAppMessageInput): Promise<ActionState<{ sid: string }>> {
+  if (!accountSid || !authToken || !fromNumber) {
+    const errorMessage = "Twilio credentials are not configured on the server."
+    console.error(errorMessage)
+    return { isSuccess: false, message: errorMessage }
+  }
+
+  if (!body && !contentSid) {
+    return {
+      isSuccess: false,
+      message: "Message failed: You must provide a body or a contentSid."
+    }
+  }
+
+  try {
+    const messageOptions: any = {
+      from: `whatsapp:${fromNumber}`,
+      to: `whatsapp:${to}`
+    }
+
+    if (contentSid) {
+      messageOptions.contentSid = contentSid
+      messageOptions.contentVariables = JSON.stringify(contentVariables || {})
+    } else {
+      messageOptions.body = body
+    }
+
+    const message = await client.messages.create(messageOptions)
+
+    return {
+      isSuccess: true,
+      message: "WhatsApp message sent successfully.",
+      data: { sid: message.sid }
+    }
+  } catch (error) {
+    console.error("Error sending WhatsApp message via Twilio:", error)
+    const errorMessage =
+      error instanceof Error ? error.message : "An unknown Twilio error occurred."
+    return {
+      isSuccess: false,
+      message: `Failed to send WhatsApp message: ${errorMessage}`
+    }
+  }
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/actions/db/profiles-actions.ts
+```ts
+/*
+Contains server actions related to profiles in the DB.
+*/
+
+"use server"
+
+import { db } from "@/db/db"
+import {
+  InsertProfile,
+  profilesTable,
+  SelectProfile
+} from "@/db/schema/profiles-schema"
+import { ActionState } from "@/types"
+import { eq } from "drizzle-orm"
+
+export async function createProfileAction(
+  data: InsertProfile
+): Promise<ActionState<SelectProfile>> {
+  try {
+    const [newProfile] = await db.insert(profilesTable).values(data).returning()
+    return {
+      isSuccess: true,
+      message: "Profile created successfully",
+      data: newProfile
+    }
+  } catch (error) {
+    console.error("Error creating profile:", error)
+    return { isSuccess: false, message: "Failed to create profile" }
+  }
+}
+
+export async function getProfileByUserIdAction(
+  userId: string
+): Promise<ActionState<SelectProfile>> {
+  try {
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profilesTable.userId, userId)
+    })
+    if (!profile) {
+      return { isSuccess: false, message: "Profile not found" }
+    }
+
+    return {
+      isSuccess: true,
+      message: "Profile retrieved successfully",
+      data: profile
+    }
+  } catch (error) {
+    console.error("Error getting profile by user id", error)
+    return { isSuccess: false, message: "Failed to get profile" }
+  }
+}
+
+export async function updateProfileAction(
+  userId: string,
+  data: Partial<InsertProfile>
+): Promise<ActionState<SelectProfile>> {
+  try {
+    const [updatedProfile] = await db
+      .update(profilesTable)
+      .set(data)
+      .where(eq(profilesTable.userId, userId))
+      .returning()
+
+    if (!updatedProfile) {
+      return { isSuccess: false, message: "Profile not found to update" }
+    }
+
+    return {
+      isSuccess: true,
+      message: "Profile updated successfully",
+      data: updatedProfile
+    }
+  } catch (error) {
+    console.error("Error updating profile:", error)
+    return { isSuccess: false, message: "Failed to update profile" }
+  }
+}
+
+export async function updateProfileByStripeCustomerIdAction(
+  stripeCustomerId: string,
+  data: Partial<InsertProfile>
+): Promise<ActionState<SelectProfile>> {
+  try {
+    const [updatedProfile] = await db
+      .update(profilesTable)
+      .set(data)
+      .where(eq(profilesTable.stripeCustomerId, stripeCustomerId))
+      .returning()
+
+    if (!updatedProfile) {
+      return {
+        isSuccess: false,
+        message: "Profile not found by Stripe customer ID"
+      }
+    }
+
+    return {
+      isSuccess: true,
+      message: "Profile updated by Stripe customer ID successfully",
+      data: updatedProfile
+    }
+  } catch (error) {
+    console.error("Error updating profile by stripe customer ID:", error)
+    return {
+      isSuccess: false,
+      message: "Failed to update profile by Stripe customer ID"
+    }
+  }
+}
+
+export async function deleteProfileAction(
+  userId: string
+): Promise<ActionState<void>> {
+  try {
+    await db.delete(profilesTable).where(eq(profilesTable.userId, userId))
+    return {
+      isSuccess: true,
+      message: "Profile deleted successfully",
+      data: undefined
+    }
+  } catch (error) {
+    console.error("Error deleting profile:", error)
+    return { isSuccess: false, message: "Failed to delete profile" }
+  }
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
+```tsx
+/*
+Hook for copying text to the clipboard.
+*/
+
+"use client"
+
+import { useState } from "react"
+
+export interface useCopyToClipboardProps {
+  timeout?: number
+}
+
+export function useCopyToClipboard({
+  timeout = 2000
+}: useCopyToClipboardProps) {
+  const [isCopied, setIsCopied] = useState<Boolean>(false)
+
+  const copyToClipboard = (value: string) => {
+    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
+      return
+    }
+
+    if (!value) {
+      return
+    }
+
+    navigator.clipboard.writeText(value).then(() => {
+      setIsCopied(true)
+
+      setTimeout(() => {
+        setIsCopied(false)
+      }, timeout)
+    })
+  }
+
+  return { isCopied, copyToClipboard }
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/license
+```
+MIT License
+
+Copyright (c) 2025 Mckay Wrigley
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 File: /Users/dev/Desktop/project/qcare-mvp/tsconfig.json
+```json
 /*
 Configures the TypeScript compiler options for the app.
 */
@@ -2371,151 +2740,559 @@ Configures the TypeScript compiler options for the app.
   "exclude": ["node_modules"]
 }
 
+```
 
-File: /Users/dev/Desktop/project/qcare-mvp/drizzle.config.ts
+File: /Users/dev/Desktop/project/qcare-mvp/app/globals.css
+```css
 /*
-Configures Drizzle for the app.
+Global styles for the app.
 */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/magicui/animated-gradient-text.tsx
+```tsx
+/*
+This client component provides an animated gradient text.
+*/
+
+import { ReactNode } from "react"
+
+import { cn } from "@/lib/utils"
+
+export default function AnimatedGradientText({
+  children,
+  className
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "group relative mx-auto flex max-w-fit flex-row items-center justify-center rounded-2xl bg-white/40 px-4 py-1.5 text-sm font-medium shadow-[inset_0_-8px_10px_#8fdfff1f] backdrop-blur-sm transition-shadow duration-500 ease-out [--bg-size:300%] hover:shadow-[inset_0_-5px_10px_#8fdfff3f] dark:bg-black/40",
+        className
+      )}
+    >
+      <div
+        className={`animate-gradient absolute inset-0 block size-full bg-gradient-to-r from-[#ffaa40]/50 via-[#9c40ff]/50 to-[#ffaa40]/50 bg-[length:var(--bg-size)_100%] p-[1px] [border-radius:inherit] ![mask-composite:subtract] [mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)]`}
+      />
+
+      {children}
+    </div>
+  )
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/consult-history-schema.ts
+```ts
+/**
+ * @file consult-history-schema.ts
+ *
+ * @description
+ * Drizzle ORM table definition for **`consult_history`**.
+ * Each row captures timing metrics once a consultation finishes at a branch,
+ * enabling analytics without scanning the volatile `queue_items`.
+ *
+ * @columns
+ * - queueItemId           : FK to the source queue item.
+ * - branchId              : Tenant, for faster analytics queries.
+ * - waitDurationSeconds   : Time from registration to consult start.
+ * - consultDurationSeconds: Time from consult start to completion.
+ * - createdAt             : Audit timestamp.
+ *
+ * @notes
+ * - We use `branchId` for composite indexing and because `queue_items`
+ * may have a different retention policy.
+ */
+// "use server"
+
+import { integer, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
+import { branchesTable } from "./branches-schema"
+import { queueItemsTable } from "./queue-items-schema"
+
+export const consultHistoryTable = pgTable("consult_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  /** Original queue item for traceability */
+  queueItemId: uuid("queue_item_id")
+    .references(() => queueItemsTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  /** Tenant reference (for faster aggregation) */
+  branchId: uuid("branch_id")
+    .references(() => branchesTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  /** Time between registration and consult start, in seconds */
+  waitDurationSeconds: integer("wait_duration_seconds").notNull(),
+
+  /** Time between consult start and completion, in seconds */
+  consultDurationSeconds: integer("consult_duration_seconds").notNull(),
+
+  /** Audit timestamps */
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date())
+})
+
+/** Drizzle type for inserting consultation history */
+export type InsertConsultHistory = typeof consultHistoryTable.$inferInsert
+/** Drizzle type for selecting consultation history */
+export type SelectConsultHistory = typeof consultHistoryTable.$inferSelect
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
+```ts
+/*
+Hook to display toast notifications.
+*/
+
+"use client"
+
+// Inspired by react-hot-toast library
+import * as React from "react"
+
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST"
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
+  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
+  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
+  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        )
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach(toast => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map(t =>
+          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
+        )
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return { ...state, toasts: [] }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter(t => t.id !== action.toastId)
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach(listener => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: open => {
+        if (!open) dismiss()
+      }
+    }
+  })
+
+  return { id: id, dismiss, update }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
+  }
+}
+
+export { toast, useToast }
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/db.ts
+```ts
+/**
+ * @file db.ts
+ *
+ * @description
+ * Centralised Drizzle ORM client initialisation for Postgres, including a
+ * schema map so Drizzle can infer strongly-typed query helpers.
+ *
+ * @notes
+ * - Migrations are NOT generated here. Follow user instructions to run `drizzle-kit`.
+ */
+
+import {
+  branchesTable,
+  branchSettingsTable,
+  consultHistoryTable,
+  organizationsTable,
+  profilesTable,
+  queueItemsTable
+} from "@/db/schema"
 import { config } from "dotenv"
-import { defineConfig } from "drizzle-kit"
+import { drizzle } from "drizzle-orm/postgres-js"
+import postgres from "postgres"
 
 config({ path: ".env.local" })
 
-export default defineConfig({
-  schema: "./db/schema/index.ts",
-  out: "./db/migrations",
-  dialect: "postgresql",
-  dbCredentials: { url: process.env.DATABASE_URL! }
+/**
+ * The schema object must include every pgTable we intend to query through
+ * `db.query.<table>` helpers. Add new tables here whenever you create a
+ * new schema file.
+ */
+const schema = {
+  profiles: profilesTable,
+  organizations: organizationsTable,
+  branches: branchesTable, // Corrected key
+  queueItems: queueItemsTable,
+  consultHistory: consultHistoryTable,
+  branchSettings: branchSettingsTable // Corrected key
+} as const
+
+/**
+ * Postgres connection using the DATABASE_URL environment variable.
+ * `postgres()` returns a lazy client that opens the connection pool on
+ * first query.
+ */
+const client = postgres(process.env.DATABASE_URL!, {
+  idle_timeout: 60 // seconds – keep idle connections short for serverless
 })
 
-
-File: /Users/dev/Desktop/project/qcare-mvp/.eslintrc.json
-/*
-Contains the ESLint configuration for the app.
-*/
-
-{
-  "$schema": "https://json.schemastore.org/eslintrc",
-  "root": true,
-  "extends": [
-    "next/core-web-vitals",
-    "prettier",
-    "plugin:tailwindcss/recommended"
-  ],
-  "plugins": ["tailwindcss"],
-  "rules": {
-    "@next/next/no-img-element": "off",
-    "jsx-a11y/alt-text": "off",
-    "react-hooks/exhaustive-deps": "off",
-    "tailwindcss/enforces-negative-arbitrary-values": "off",
-    "tailwindcss/no-contradicting-classname": "off",
-    "tailwindcss/no-custom-classname": "off",
-    "tailwindcss/no-unnecessary-arbitrary-value": "off",
-    "react/no-unescaped-entities": "off"
-  },
-  "settings": {
-    "tailwindcss": { "callees": ["cn", "cva"], "config": "tailwind.config.ts" }
-  },
-  "overrides": [
-    { "files": ["*.ts", "*.tsx"], "parser": "@typescript-eslint/parser" }
-  ]
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/actions/twilio-actions.ts
 /**
- * @file twilio-actions.ts
+ * Drizzle ORM instance—exported for use in server actions.
+ */
+export const db = drizzle(client, { schema })
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/queue-items-schema.ts
+```ts
+/**
+ * @file queue-items-schema.ts
  *
  * @description
- * Server actions for interacting with the Twilio API, specifically for sending
- * WhatsApp messages to patients. This file encapsulates all the logic for
- * communicating with Twilio.
+ * Drizzle ORM table definition for **`queue_items`**. Each row represents
+ * a patient currently (or previously) in an OPD queue for a specific branch.
  *
- * @dependencies
- * - `twilio`: The official Twilio Node.js helper library.
- * - `types/server-action-types.ts`: For the `ActionState` return type.
+ * @columns
+ * - id, branchId            : Identification & tenancy.
+ * - patientName, phone, age, etc. : Patient details.
+ * - reason                 : Reason for visit / chief complaint.
+ * - status (enum)          : WAITLIST | SERVING | COMPLETE | CANCELLED.
+ * - position               : Integer ordering within WAITLIST.
+ * - doctorId               : Optional textual identifier for doctor.
+ * - createdAt / updatedAt  : Audit timestamps.
  *
- * @configuration
- * This action requires the following environment variables to be set in `.env.local`:
- * - `TWILIO_SID`: Your Twilio Account SID.
- * - `TWILIO_AUTH_TOKEN`: Your Twilio Auth Token.
- * - `TWILIO_WHATSAPP_FROM`: Your Twilio WhatsApp-enabled phone number.
+ * @relations
+ * - FK branchId ➔ branches.id (ON DELETE CASCADE)
  */
-"use server"
+// "use server"
 
-import { ActionState } from "@/types"
-import twilio from "twilio"
+import {
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core"
+import { branchesTable } from "./branches-schema"
 
-// Initialize Twilio client from environment variables.
-const accountSid = process.env.TWILIO_SID
-const authToken = process.env.TWILIO_AUTH_TOKEN
-const fromNumber = process.env.TWILIO_WHATSAPP_FROM
+/** Status enumeration as per functional spec */
+export const queueStatusEnum = pgEnum("queue_status", [
+  "WAITLIST",
+  "SERVING",
+  "COMPLETE",
+  "CANCELLED",
+])
 
-// A single Twilio client instance is created and reused.
-const client = twilio(accountSid, authToken)
+export const queueItemsTable = pgTable("queue_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
 
-interface SendWhatsAppMessageInput {
-  to: string
-  body: string
+  /** Tenant reference — cascades on branch deletion */
+  branchId: uuid("branch_id")
+    .references(() => branchesTable.id, { onDelete: "cascade" })
+    .notNull(),
+
+  /** Patient-facing fields */
+  patientName: text("patient_name").notNull(),
+  phone: text("phone"),
+  age: integer("age"),
+  height: integer("height"), // in cm
+  weight: integer("weight"), // in kg
+  address: text("address"),
+
+  /** Chief complaint / reason for visit */
+  reason: text("reason"),
+
+  /** Current queue status; default is WAITLIST */
+  status: queueStatusEnum("status").notNull().default("WAITLIST"),
+
+  /**
+   * Display ordering inside WAITLIST.
+   * IMPORTANT: Managed exclusively by server actions that enforce a dense
+   * ranking (0-n without gaps) to simplify “position” math.
+   */
+  position: integer("position").notNull().default(0),
+
+  /**
+   * The doctor the patient is eventually assigned to.
+   * We store the Clerk/Supabase userId or any identifier string.
+   */
+  doctorId: text("doctor_id"),
+
+  /** Audit fields */
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+})
+
+/** Drizzle type for inserting a queue item */
+export type InsertQueueItem = typeof queueItemsTable.$inferInsert
+/** Drizzle type for selecting a queue item */
+export type SelectQueueItem = typeof queueItemsTable.$inferSelect
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
+```tsx
+/*
+Hook to check if the user is on a mobile device.
+*/
+
+import * as React from "react"
+
+const MOBILE_BREAKPOINT = 768
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
 }
 
-/**
- * @function sendWhatsAppMessageAction
- * @description Sends a WhatsApp message using the Twilio API.
- *
- * @param {SendWhatsAppMessageInput} { to, body }
- * - `to`: The recipient's phone number (e.g., "+15551234567").
- * - `body`: The content of the message to be sent.
- *
- * @returns {Promise<ActionState<{ sid: string }>>} An `ActionState` object.
- * - On success: `{ isSuccess: true, message: "...", data: { sid: message.sid } }`
- * - On failure: `{ isSuccess: false, message: "..." }`
- *
- * @logic
- * 1.  Validates that the required Twilio environment variables are available.
- * 2.  Formats the 'to' and 'from' numbers with the required "whatsapp:" prefix.
- * 3.  Calls the Twilio `messages.create` API within a try-catch block.
- * 4.  Handles potential API errors and returns a structured `ActionState` response.
- */
-export async function sendWhatsAppMessageAction({
-  to,
-  body
-}: SendWhatsAppMessageInput): Promise<ActionState<{ sid: string }>> {
-  // Early return if Twilio credentials are not configured in the environment.
-  if (!accountSid || !authToken || !fromNumber) {
-    const errorMessage =
-      "Twilio credentials are not configured on the server."
-    console.error(errorMessage)
-    return { isSuccess: false, message: errorMessage }
-  }
+```
 
-  try {
-    const message = await client.messages.create({
-      from: `whatsapp:${fromNumber}`,
-      to: `whatsapp:${to}`,
-      body: body
-    })
+File: /Users/dev/Desktop/project/qcare-mvp/postcss.config.mjs
+```mjs
+/*
+Configures PostCSS for the app.
+*/
 
-    return {
-      isSuccess: true,
-      message: "WhatsApp message sent successfully.",
-      data: { sid: message.sid }
-    }
-  } catch (error) {
-    console.error("Error sending WhatsApp message via Twilio:", error)
-    // The Twilio helper library throws detailed error objects. We extract the
-    // message for a more informative response to the caller.
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown Twilio error occurred."
-    return {
-      isSuccess: false,
-      message: `Failed to send WhatsApp message: ${errorMessage}`
-    }
-  }
-}
+/** @type {import('postcss-load-config').Config} */
+const config = { plugins: { tailwindcss: {} } }
+
+export default config
+
+```
 
 File: /Users/dev/Desktop/project/qcare-mvp/actions/stripe-actions.ts
+```ts
 /*
 Contains server actions related to Stripe.
 */
@@ -2631,26 +3408,1125 @@ export const manageSubscriptionStatusChange = async (
   }
 }
 
+```
 
-File: /Users/dev/Desktop/project/qcare-mvp/types/server-action-types.ts
+File: /Users/dev/Desktop/project/qcare-mvp/drizzle.config.ts
+```ts
 /*
-Contains the general server action types.
+Configures Drizzle for the app.
 */
 
-export type ActionState<T> =
-  | { isSuccess: true; message: string; data: T }
-  | { isSuccess: false; message: string; data?: never }
+import { config } from "dotenv"
+import { defineConfig } from "drizzle-kit"
 
+config({ path: ".env.local" })
 
-File: /Users/dev/Desktop/project/qcare-mvp/types/index.ts
+export default defineConfig({
+  schema: "./db/schema/index.ts",
+  out: "./db/migrations",
+  dialect: "postgresql",
+  dbCredentials: { url: process.env.DATABASE_URL! }
+})
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/tailwind.config.ts
+```ts
 /*
-Exports the types for the app.
+Configures Tailwind CSS for the app.
 */
 
-export * from "./server-action-types"
+import type { Config } from "tailwindcss"
 
+const config = {
+  darkMode: ["class"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}"
+  ],
+  prefix: "",
+  theme: {
+    container: { center: true, padding: "2rem", screens: { "2xl": "1400px" } },
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))"
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))"
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))"
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))"
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))"
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))"
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))"
+        },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))"
+        }
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)"
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" }
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" }
+        },
+        gradient: { to: { backgroundPosition: "var(--bg-size) 0" } }
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+        gradient: "gradient 8s linear infinite"
+      }
+    }
+  },
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography"),
+    require("@tailwindcss/postcss")
+  ]
+} satisfies Config
+
+export default config
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
+```tsx
+/*
+This server component provides a tailwind indicator for the app in dev mode.
+*/
+
+"use server"
+
+export async function TailwindIndicator() {
+  // Don't show in production
+  if (process.env.NODE_ENV === "production") return null
+
+  return (
+    <div className="fixed bottom-12 left-3 z-50 flex size-6 items-center justify-center rounded-full bg-gray-800 p-3 font-mono text-xs text-white">
+      <div className="block sm:hidden">xs</div>
+      <div className="hidden sm:block md:hidden">sm</div>
+      <div className="hidden md:block lg:hidden">md</div>
+      <div className="hidden lg:block xl:hidden">lg</div>
+      <div className="hidden xl:block 2xl:hidden">xl</div>
+      <div className="hidden 2xl:block">2xl</div>
+    </div>
+  )
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/.eslintrc.json
+```json
+/*
+Contains the ESLint configuration for the app.
+*/
+
+{
+  "$schema": "https://json.schemastore.org/eslintrc",
+  "root": true,
+  "extends": [
+    "next/core-web-vitals",
+    "prettier",
+    "plugin:tailwindcss/recommended"
+  ],
+  "plugins": ["tailwindcss"],
+  "rules": {
+    "@next/next/no-img-element": "off",
+    "jsx-a11y/alt-text": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "tailwindcss/enforces-negative-arbitrary-values": "off",
+    "tailwindcss/no-contradicting-classname": "off",
+    "tailwindcss/no-custom-classname": "off",
+    "tailwindcss/no-unnecessary-arbitrary-value": "off",
+    "react/no-unescaped-entities": "off"
+  },
+  "settings": {
+    "tailwindcss": { "callees": ["cn", "cva"], "config": "tailwind.config.ts" }
+  },
+  "overrides": [
+    { "files": ["*.ts", "*.tsx"], "parser": "@typescript-eslint/parser" }
+  ]
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/middleware.ts
+```ts
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+
+// Define the routes that should be publicly accessible.
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/about",
+  "/contact",
+  "/features",
+  "/pricing",
+  "/login(.*)",
+  "/signup(.*)",
+  "/q/(.*)", 
+  "/api/stripe/webhooks",
+]);
+
+export default clerkMiddleware(async (auth, request) => {
+  // If the requested route is not public, check for authentication.
+  if (!isPublicRoute(request)) {
+    // Await the auth() call to get the user's authentication state.
+    const { userId } = await auth();
+
+    // If the user is not signed in, redirect them to the sign-in page.
+    if (!userId) {
+      const signInUrl = new URL("/login", request.url);
+      signInUrl.searchParams.set("redirect_url", request.url);
+      return NextResponse.redirect(signInUrl);
+    }
+  }
+
+  // If the route is public or the user is authenticated, allow the request to proceed.
+  return NextResponse.next();
+});
+
+export const config = {
+  // The matcher ensures that the middleware runs on all routes except for
+  // static assets and Next.js-specific paths.
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+};
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/magicui/hero-video-dialog.tsx
+```tsx
+/*
+This client component provides a video dialog for the hero section.
+*/
+
+"use client"
+
+import { AnimatePresence, motion } from "framer-motion"
+import { Play, XIcon } from "lucide-react"
+import { useState } from "react"
+
+import { cn } from "@/lib/utils"
+
+type AnimationStyle =
+  | "from-bottom"
+  | "from-center"
+  | "from-top"
+  | "from-left"
+  | "from-right"
+  | "fade"
+  | "top-in-bottom-out"
+  | "left-in-right-out"
+
+interface HeroVideoProps {
+  animationStyle?: AnimationStyle
+  videoSrc: string
+  thumbnailSrc: string
+  thumbnailAlt?: string
+  className?: string
+}
+
+const animationVariants = {
+  "from-bottom": {
+    initial: { y: "100%", opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    exit: { y: "100%", opacity: 0 }
+  },
+  "from-center": {
+    initial: { scale: 0.5, opacity: 0 },
+    animate: { scale: 1, opacity: 1 },
+    exit: { scale: 0.5, opacity: 0 }
+  },
+  "from-top": {
+    initial: { y: "-100%", opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    exit: { y: "-100%", opacity: 0 }
+  },
+  "from-left": {
+    initial: { x: "-100%", opacity: 0 },
+    animate: { x: 0, opacity: 1 },
+    exit: { x: "-100%", opacity: 0 }
+  },
+  "from-right": {
+    initial: { x: "100%", opacity: 0 },
+    animate: { x: 0, opacity: 1 },
+    exit: { x: "100%", opacity: 0 }
+  },
+  fade: {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0 }
+  },
+  "top-in-bottom-out": {
+    initial: { y: "-100%", opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    exit: { y: "100%", opacity: 0 }
+  },
+  "left-in-right-out": {
+    initial: { x: "-100%", opacity: 0 },
+    animate: { x: 0, opacity: 1 },
+    exit: { x: "100%", opacity: 0 }
+  }
+}
+
+export default function HeroVideoDialog({
+  animationStyle = "from-center",
+  videoSrc,
+  thumbnailSrc,
+  thumbnailAlt = "Video thumbnail",
+  className
+}: HeroVideoProps) {
+  const [isVideoOpen, setIsVideoOpen] = useState(false)
+  const selectedAnimation = animationVariants[animationStyle]
+
+  return (
+    <div className={cn("relative", className)}>
+      <div
+        className="group relative cursor-pointer"
+        onClick={() => setIsVideoOpen(true)}
+      >
+        <img
+          src={thumbnailSrc}
+          alt={thumbnailAlt}
+          width={1920}
+          height={1080}
+          className="w-full rounded-md border shadow-lg transition-all duration-200 ease-out group-hover:brightness-[0.8]"
+        />
+        <div className="absolute inset-0 flex scale-[0.9] items-center justify-center rounded-2xl transition-all duration-200 ease-out group-hover:scale-100">
+          <div className="bg-primary/10 flex size-28 items-center justify-center rounded-full backdrop-blur-md">
+            <div
+              className={`from-primary/30 to-primary relative flex size-20 scale-100 items-center justify-center rounded-full bg-gradient-to-b shadow-md transition-all duration-200 ease-out group-hover:scale-[1.2]`}
+            >
+              <Play
+                className="size-8 scale-100 fill-white text-white transition-transform duration-200 ease-out group-hover:scale-105"
+                style={{
+                  filter:
+                    "drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))"
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <AnimatePresence>
+        {isVideoOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => setIsVideoOpen(false)}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md"
+          >
+            <motion.div
+              {...selectedAnimation}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="relative mx-4 aspect-video w-full max-w-4xl md:mx-0"
+            >
+              <motion.button className="absolute -top-16 right-0 rounded-full bg-neutral-900/50 p-2 text-xl text-white ring-1 backdrop-blur-md dark:bg-neutral-100/50 dark:text-black">
+                <XIcon className="size-5" />
+              </motion.button>
+              <div className="relative isolate z-[1] size-full overflow-hidden rounded-2xl border-2 border-white">
+                <iframe
+                  src={videoSrc}
+                  className="size-full rounded-2xl"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                ></iframe>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/q/[queueId]/page.tsx
+```tsx
+/**
+ * @file app/q/[queueId]/page.tsx
+ *
+ * @description
+ * This file defines the server page for viewing a single patient's
+ * queue status. It fetches data based on the `queueId` provided in the URL.
+ */
+"use server"
+
+import { Suspense } from "react"
+import PatientQueueView from "./_components/patient-queue-view"
+import { getPublicQueueItemDetailsAction } from "@/actions/db/queue_items_actions"
+
+interface PatientQueuePageProps {
+  params: {
+    queueId: string
+  }
+}
+
+/**
+ * The primary server component for the dynamic `/q/[queueId]` route. It awaits
+ * the params and then uses a Suspense boundary to handle loading states.
+ */
+export default async function PatientQueuePage({
+  params
+}: PatientQueuePageProps) {
+  // Await the params promise to get the resolved value
+  const { queueId } = await params
+
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Loading your queue status...
+        </div>
+      }
+    >
+      <PatientQueueFetcher queueId={queueId} />
+    </Suspense>
+  )
+}
+
+/**
+ * An asynchronous server component responsible for fetching the specific patient's
+ * queue data and passing it to the display component.
+ */
+async function PatientQueueFetcher({ queueId }: { queueId: string }) {
+  const result = await getPublicQueueItemDetailsAction(queueId)
+
+  if (!result.isSuccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center font-semibold text-red-500">
+        Error: {result.message}
+      </div>
+    )
+  }
+
+  return <PatientQueueView initialData={result.data} />
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/theme-switcher.tsx
+```tsx
+/*
+This client component provides a theme switcher for the app.
+*/
+
+"use client"
+
+import { cn } from "@/lib/utils"
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+import { HTMLAttributes, ReactNode } from "react"
+
+interface ThemeSwitcherProps extends HTMLAttributes<HTMLDivElement> {
+  children?: ReactNode
+}
+
+export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
+  const { setTheme, theme } = useTheme()
+
+  const handleChange = (theme: "dark" | "light") => {
+    localStorage.setItem("theme", theme)
+    setTheme(theme)
+  }
+
+  return (
+    <div
+      className={cn(
+        "p-1 hover:cursor-pointer hover:opacity-50",
+        props.className
+      )}
+      onClick={() => handleChange(theme === "light" ? "dark" : "light")}
+    >
+      {theme === "dark" ? (
+        <Moon className="size-6" />
+      ) : (
+        <Sun className="size-6" />
+      )}
+    </div>
+  )
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/providers.tsx
+```tsx
+/*
+This client component provides the providers for the app.
+*/
+
+"use client"
+
+import { TooltipProvider } from "@/components/ui/tooltip"
+import {
+  ThemeProvider as NextThemesProvider,
+  ThemeProviderProps
+} from "next-themes"
+
+export const Providers = ({ children, ...props }: ThemeProviderProps) => {
+  return (
+    <NextThemesProvider {...props}>
+      <TooltipProvider>{children}</TooltipProvider>
+    </NextThemesProvider>
+  )
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/actions/db/queue_items_actions.ts
+```ts
+/**
+ * @file queue-items-actions.ts
+ *
+ * @description
+ * Server actions for managing the `queue_items` table. This includes operations
+ * such as creating, reordering, and updating the status of queue items. These
+ * actions encapsulate the database logic and are designed to be securely called
+ * from client components. This file now also includes logic to trigger proximity
+ * alerts via WhatsApp.
+ *
+ * @dependencies
+ * - `drizzle-orm`: For database queries.
+ * - `db/schema/queue-items-schema.ts`: For table and type definitions.
+ * - `types/server-action-types.ts`: For the `ActionState` return type.
+ * - `actions/twilio-actions.ts`: For sending WhatsApp messages.
+ * - `actions/db/branch-settings-actions.ts`: For retrieving alert thresholds.
+ */
+"use server"
+
+import { db } from "@/db/db"
+import {
+  consultHistoryTable,
+  InsertQueueItem,
+  queueItemsTable,
+  queueStatusEnum,
+  SelectQueueItem,
+} from "@/db/schema"
+import { ActionState } from "@/types"
+import { and, asc, desc, eq, gte } from "drizzle-orm"
+import { startOfDay } from "date-fns"
+import { revalidatePath } from "next/cache"
+import { createConsultHistoryAction } from "./consult_history_actions"
+import { getBranchSettingsAction } from "./branch-settings-actions"
+import { sendWhatsAppMessageAction } from "@/actions/twilio-actions"
+
+/**
+ * The input type for creating a new queue item, omitting fields that are
+ * managed by the server (e.g., id, status, position).
+ */
+type CreateQueueItemInput = Omit<
+  InsertQueueItem,
+  "id" | "status" | "position" | "createdAt" | "updatedAt"
+>
+
+/**
+ * The input type for registering a new patient, which includes all the
+ * new fields from the registration form.
+ */
+export interface RegisterPatientInput {
+  patientName: string
+  phone?: string | null
+  reason?: string | null
+  branchId: string
+  doctorId?: string | null
+  age?: number | null
+  height?: number | null
+  weight?: number | null
+  address?: string | null
+}
+
+/**
+ * The input type for reordering items, specifying the unique identifier
+ * and the new desired position for each item.
+ */
+interface ReorderQueueItem {
+  id: string
+  position: number
+}
+
+/**
+ * A union type for the Drizzle client, allowing helper functions to be used
+ * either standalone or within a transaction.
+ */
+type DbOrTxClient =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// =================================================================================
+// H E L P E R S
+// =================================================================================
+
+/**
+ * @function checkAndSendProximityAlerts
+ * @description Checks the waitlist for a given branch and sends "You're next" or
+ * "You are N spots away" WhatsApp notifications to patients who have reached the
+ * configured alert threshold.
+ * @param {string} branchId - The ID of the branch to check.
+ * @param {DbOrTxClient} tx - The Drizzle transaction client.
+ */
+async function checkAndSendProximityAlerts(
+  branchId: string,
+  tx: DbOrTxClient
+) {
+  try {
+    // 1. Get branch-specific alert settings
+    const settingsResult = await getBranchSettingsAction(branchId, tx)
+    if (!settingsResult.isSuccess || !settingsResult.data) {
+      console.error(
+        `Could not retrieve settings for branch ${branchId}. Alerts will not be sent.`
+      )
+      return
+    }
+    const { alertThreshold } = settingsResult.data
+
+    // 2. Get the current waitlist, up to the alert threshold
+    const waitlist = await tx.query.queueItems.findMany({
+      where: and(
+        eq(queueItemsTable.branchId, branchId),
+        eq(queueItemsTable.status, "WAITLIST")
+      ),
+      orderBy: [asc(queueItemsTable.position)],
+      limit: alertThreshold // Only fetch patients within the alert range
+    })
+
+    // 3. Iterate and send alerts
+    for (const patient of waitlist) {
+      if (!patient.phone) {
+        continue // Cannot notify without a phone number
+      }
+
+      const position = patient.position + 1 // Display as 1-based index
+
+      if (position <= alertThreshold) {
+        let messageBody = ""
+        if (position === 1) {
+          messageBody = "You are next – please check in at reception."
+        } else {
+          messageBody = `Your turn is near! You are now #${position} in the queue.`
+        }
+
+        // Asynchronously send the message; do not block the transaction.
+        sendWhatsAppMessageAction({
+          to: patient.phone,
+          body: messageBody,
+        }).then(result => {
+          if (!result.isSuccess) {
+            console.error(
+              `Failed to send proximity alert to ${patient.phone}: ${result.message}`
+            )
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error("Error during proximity alert check:", error)
+  }
+}
+
+// =================================================================================
+// C R E A T E
+// =================================================================================
+
+export async function createQueueItemAction(
+  data: CreateQueueItemInput
+): Promise<ActionState<SelectQueueItem>> {
+  try {
+    const newQueueItem = await db.transaction(async tx => {
+      const [lastQueueItem] = await tx
+        .select({ position: queueItemsTable.position })
+        .from(queueItemsTable)
+        .where(
+          and(
+            eq(queueItemsTable.branchId, data.branchId),
+            eq(queueItemsTable.status, "WAITLIST")
+          )
+        )
+        .orderBy(desc(queueItemsTable.position))
+        .limit(1)
+
+      const newPosition = lastQueueItem ? lastQueueItem.position + 1 : 0
+
+      const [insertedItem] = await tx
+        .insert(queueItemsTable)
+        .values({
+          ...data,
+          status: "WAITLIST",
+          position: newPosition,
+        })
+        .returning()
+
+      return insertedItem
+    })
+
+    revalidatePath("/reception")
+
+    return {
+      isSuccess: true,
+      message: "Patient added to queue successfully.",
+      data: newQueueItem,
+    }
+  } catch (error) {
+    console.error("Error creating queue item:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return { isSuccess: false, message: "Failed to add patient to the queue." }
+  }
+}
+
+
+export async function registerPatientAction(
+    data: RegisterPatientInput
+  ): Promise<ActionState<SelectQueueItem>> {
+    const createResult = await createQueueItemAction(data);
+  
+    if (!createResult.isSuccess) {
+      return createResult;
+    }
+  
+    const newQueueItem = createResult.data;
+  
+    // The code now sends a simple "body" message
+    if (newQueueItem.phone) {
+      const detailsResult = await getPublicQueueItemDetailsAction(newQueueItem.id);
+      if (detailsResult.isSuccess) {
+        const { position, estimatedWaitTimeMinutes } = detailsResult.data;
+        const welcomeMessage = `Welcome, ${newQueueItem.patientName}! You are number ${position} in the queue. Your estimated wait time is ${estimatedWaitTimeMinutes} minutes. View your live status here: ${process.env.NEXT_PUBLIC_BASE_URL}/q/${newQueueItem.id}`;
+        
+        sendWhatsAppMessageAction({
+          to: newQueueItem.phone,
+          body: welcomeMessage
+        }).then(notificationResult => {
+          if (!notificationResult.isSuccess) {
+            console.error(
+              `Failed to send WhatsApp notification for queue item ${newQueueItem.id}: ${notificationResult.message}`
+            );
+          }
+        });
+      }
+    }
+  
+    return {
+      isSuccess: true,
+      message: "Patient registered successfully.",
+      data: newQueueItem
+    };
+  }
+  
+// =================================================================================
+// R E A D
+// =================================================================================
+
+export interface PublicQueueDetails {
+  queueItem: SelectQueueItem
+  position: number
+  estimatedWaitTimeMinutes: number
+}
+
+export async function getPublicQueueItemDetailsAction(
+  queueItemId: string
+): Promise<ActionState<PublicQueueDetails>> {
+  try {
+    const [item] = await db
+      .select()
+      .from(queueItemsTable)
+      .where(eq(queueItemsTable.id, queueItemId))
+
+    if (!item) {
+      return { isSuccess: false, message: "Queue entry not found." }
+    }
+
+    if (item.status !== "WAITLIST") {
+      return {
+        isSuccess: false,
+        message: `Your consultation status is: ${item.status}.`,
+      }
+    }
+
+    const { branchId } = item
+
+    const waitlist = await db.query.queueItems.findMany({
+      where: and(
+        eq(queueItemsTable.branchId, branchId),
+        eq(queueItemsTable.status, "WAITLIST")
+      ),
+      orderBy: [asc(queueItemsTable.position)],
+    })
+
+    const position = waitlist.findIndex(i => i.id === queueItemId)
+
+    const sampleSize = parseInt(process.env.WAIT_ESTIMATE_SAMPLE_SIZE || "5")
+    const recentConsults = await db
+      .select({ duration: consultHistoryTable.consultDurationSeconds })
+      .from(consultHistoryTable)
+      .where(eq(consultHistoryTable.branchId, branchId))
+      .orderBy(desc(consultHistoryTable.createdAt))
+      .limit(sampleSize)
+
+    let avgConsultTimeSeconds = 15 * 60 // Default to 15 mins
+    if (recentConsults.length > 0) {
+      const totalDuration = recentConsults.reduce(
+        (sum, consult) => sum + consult.duration,
+        0
+      )
+      avgConsultTimeSeconds = totalDuration / recentConsults.length
+    }
+
+    const estimatedWaitTimeMinutes = Math.round(
+      (position * avgConsultTimeSeconds) / 60
+    )
+
+    return {
+      isSuccess: true,
+      message: "Queue details retrieved.",
+      data: {
+        queueItem: item,
+        position: position + 1, // Return 1-based index for display
+        estimatedWaitTimeMinutes,
+      },
+    }
+  } catch (error) {
+    console.error("Error getting public queue details:", error)
+    return { isSuccess: false, message: "Failed to retrieve queue details." }
+  }
+}
+
+export async function getQueueItemsByBranchAction(
+  branchId: string
+): Promise<ActionState<SelectQueueItem[]>> {
+  try {
+    const items = await db.query.queueItems.findMany({
+      where: eq(queueItemsTable.branchId, branchId),
+      orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)],
+    })
+
+    return {
+      isSuccess: true,
+      message: "Queue items retrieved successfully.",
+      data: items,
+    }
+  } catch (error) {
+    console.error("Error retrieving queue items:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return { isSuccess: false, message: "Failed to retrieve queue items." }
+  }
+}
+
+export async function getQueueItemsByDoctorIdAction(
+  branchId: string,
+  doctorId: string
+): Promise<ActionState<SelectQueueItem[]>> {
+  try {
+    const todayStart = startOfDay(new Date())
+    const items = await db.query.queueItems.findMany({
+      where: and(
+        eq(queueItemsTable.branchId, branchId),
+        eq(queueItemsTable.doctorId, doctorId),
+        eq(queueItemsTable.status, "WAITLIST"),
+        gte(queueItemsTable.createdAt, todayStart)
+      ),
+      orderBy: [asc(queueItemsTable.position)],
+    })
+
+    return {
+      isSuccess: true,
+      message: `Queue for Dr. ${doctorId} retrieved successfully.`,
+      data: items,
+    }
+  } catch (error) {
+    console.error("Error retrieving doctor's queue items:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return { isSuccess: false, message: "Failed to retrieve doctor's queue." }
+  }
+}
+
+// =================================================================================
+// U P D A T E
+// =================================================================================
+
+export async function reorderQueueAction(
+  items: ReorderQueueItem[]
+): Promise<ActionState<void>> {
+  try {
+    await db.transaction(async tx => {
+      if (items.length === 0) {
+        return
+      }
+
+      const updatePromises = items.map(item =>
+        tx
+          .update(queueItemsTable)
+          .set({ position: item.position })
+          .where(eq(queueItemsTable.id, item.id))
+      )
+      await Promise.all(updatePromises)
+
+      const [firstItem] = await tx
+        .select({ branchId: queueItemsTable.branchId })
+        .from(queueItemsTable)
+        .where(eq(queueItemsTable.id, items[0].id))
+        .limit(1)
+
+      if (firstItem && firstItem.branchId) {
+        await checkAndSendProximityAlerts(firstItem.branchId, tx)
+      }
+    })
+
+    revalidatePath("/reception")
+
+    return {
+      isSuccess: true,
+      message: "Queue reordered successfully.",
+      data: undefined,
+    }
+  } catch (error) {
+    console.error("Error reordering queue:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return { isSuccess: false, message: "Failed to reorder the queue." }
+  }
+}
+
+export async function updateQueueStatusAction(
+  queueItemId: string,
+  newStatus: (typeof queueStatusEnum.enumValues)[number]
+): Promise<ActionState<SelectQueueItem>> {
+  try {
+    const updatedItem = await db.transaction(async tx => {
+      const [currentItem] = await tx
+        .select()
+        .from(queueItemsTable)
+        .where(eq(queueItemsTable.id, queueItemId))
+
+      if (!currentItem) {
+        throw new Error("Queue item not found.")
+      }
+
+      if (newStatus === "COMPLETE" && currentItem.status === "SERVING") {
+        const completionTime = new Date()
+        const consultStartTime = currentItem.updatedAt
+        const registrationTime = currentItem.createdAt
+
+        const waitDurationSeconds = Math.round(
+          (consultStartTime.getTime() - registrationTime.getTime()) / 1000
+        )
+        const consultDurationSeconds = Math.round(
+          (completionTime.getTime() - consultStartTime.getTime()) / 1000
+        )
+
+        const historyResult = await createConsultHistoryAction({
+          data: {
+            queueItemId: currentItem.id,
+            branchId: currentItem.branchId,
+            waitDurationSeconds,
+            consultDurationSeconds,
+          },
+          tx,
+        })
+
+        if (!historyResult.isSuccess) {
+          throw new Error(
+            `Failed to log consultation history: ${historyResult.message}`
+          )
+        }
+      }
+
+      const newPosition =
+        newStatus === "COMPLETE" || newStatus === "CANCELLED"
+          ? -1
+          : currentItem.position
+
+      const [updated] = await tx
+        .update(queueItemsTable)
+        .set({ status: newStatus, position: newPosition })
+        .where(eq(queueItemsTable.id, queueItemId))
+        .returning()
+
+      if (
+        (newStatus === "COMPLETE" || newStatus === "CANCELLED") &&
+        currentItem.status !== "COMPLETE" &&
+        currentItem.status !== "CANCELLED"
+      ) {
+        await checkAndSendProximityAlerts(currentItem.branchId, tx)
+      }
+
+      return updated
+    })
+
+    if (!updatedItem) {
+      return { isSuccess: false, message: "Could not update queue item." }
+    }
+
+    revalidatePath("/reception")
+    revalidatePath("/doctor")
+
+    return {
+      isSuccess: true,
+      message: `Status updated successfully to ${newStatus}.`,
+      data: updatedItem,
+    }
+  } catch (error) {
+    console.error("Error updating queue status:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return {
+      isSuccess: false,
+      message: "An unknown error occurred while updating status.",
+    }
+  }
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
+```tsx
+/*
+This server layout provides a centered layout for (auth) pages.
+*/
+
+"use server"
+
+interface AuthLayoutProps {
+  children: React.ReactNode
+}
+
+export default async function AuthLayout({ children }: AuthLayoutProps) {
+  return (
+    <div className="flex h-screen items-center justify-center">{children}</div>
+  )
+}
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/actions/db/consult_history_actions.ts
+```ts
+/**
+ * @file consult-history-actions.ts
+ *
+ * @description
+ * Server actions for managing the `consult_history` table. This includes
+ * creating, and in the future, reading or deleting consultation history records.
+ *
+ * @see
+ * - `db/schema/consult-history-schema.ts` for table and type definitions.
+ */
+"use server"
+
+import { db } from "@/db/db"
+import {
+  consultHistoryTable,
+  InsertConsultHistory,
+  SelectConsultHistory
+} from "@/db/schema"
+import { ActionState } from "@/types"
+
+/**
+ * Defines a union type that can accept either the main Drizzle `db` client or
+ * the client from within a `db.transaction(async (tx) => {})` block.
+ * This allows the action to be composable and used within other transactions.
+ */
+type DbOrTxClient =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// The input interface now uses the flexible DbOrTxClient type.
+interface CreateHistoryInput {
+  data: InsertConsultHistory
+  tx?: DbOrTxClient
+}
+
+/**
+ * @function createConsultHistoryAction
+ * @description Creates a new record in the `consult_history` table. Can be
+ * used within a larger database transaction by passing the transaction client.
+ *
+ * @param {CreateHistoryInput} { data, tx } - An object containing the data and
+ * an optional Drizzle transaction client.
+ *
+ * @returns {Promise<ActionState<SelectConsultHistory>>} An `ActionState` object
+ * containing the result of the operation.
+ */
+export async function createConsultHistoryAction({
+  data,
+  tx
+}: CreateHistoryInput): Promise<ActionState<SelectConsultHistory>> {
+  try {
+    // Use the transaction client if it's passed, otherwise use the global db client.
+    const dbClient = tx || db
+
+    const [newHistory] = await dbClient
+      .insert(consultHistoryTable)
+      .values(data)
+      .returning()
+
+    return {
+      isSuccess: true,
+      message: "Consultation history created successfully.",
+      data: newHistory
+    }
+  } catch (error) {
+    console.error("Error creating consult history:", error)
+    if (error instanceof Error) {
+      return { isSuccess: false, message: error.message }
+    }
+    return {
+      isSuccess: false,
+      message: "Failed to create consultation history."
+    }
+  }
+}
+```
 
 File: /Users/dev/Desktop/project/qcare-mvp/lib/stripe.ts
+```ts
 /*
 Contains the Stripe configuration for the app.
 */
@@ -2661,450 +4537,116 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-02-24.acacia",
   appInfo: { name: "Receipt AI", version: "0.1.0" }
 })
+```
 
-File: /Users/dev/Desktop/project/qcare-mvp/lib/utils.ts
+File: /Users/dev/Desktop/project/qcare-mvp/types/index.ts
+```ts
 /*
-Contains the utility functions for the app.
+Exports the types for the app.
 */
 
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+export * from "./server-action-types"
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
+```
 
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/supabase-client.ts
+File: /Users/dev/Desktop/project/qcare-mvp/app/q/[queueId]/_components/patient-queue-view.tsx
+```tsx
 /**
- * @file supabase-client.ts
+ * @file patient-queue-view.tsx
+ * @description This client component displays the patient's current position in the
+ * queue and the estimated wait time. It now uses Supabase Realtime to listen
+ * for changes and automatically refresh its data.
  *
- * @description
- * This file creates and exports a client-side Supabase client instance.
- * This instance is intended for use in client components, particularly for
- * setting up real-time data subscriptions. It uses public environment
- * variables and relies on Supabase's Row Level Security (RLS) for data protection.
- *
- * This is created as a singleton to ensure that only one instance of the
- * Supabase client is used throughout the application on the client side.
- *
- * @dependencies
- * - `@supabase/supabase-js`: The official JavaScript library for Supabase.
- *
- * @configuration
- * Requires the following public environment variables to be set in `.env.local`:
- * - `NEXT_PUBLIC_SUPABASE_URL`: The URL of your Supabase project.
- * - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: The public "anonymous" key for your project.
- */
-
-import { createClient } from "@supabase/supabase-js"
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Create and export the client-side Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/layout.tsx
-import { ClerkProvider } from "@clerk/nextjs"
-import { Inter } from "next/font/google"
-import type { Metadata } from "next"
-
-import { Toaster } from "@/components/ui/sonner"
-import { Providers } from "@/components/utilities/providers"
-import { TailwindIndicator } from "@/components/utilities/tailwind-indicator"
-import { cn } from "@/lib/utils"
-import "./globals.css"
-
-const inter = Inter({ subsets: ["latin"] })
-
-export const metadata: Metadata = {
-  title: "QCare",
-  description: "A real-time queue management system.",
-}
-
-export default function RootLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <body
-          className={cn(
-            "min-h-screen bg-background font-sans antialiased",
-            inter.className
-          )}
-        >
-          <Providers
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-            <TailwindIndicator />
-          </Providers>
-        </body>
-      </html>
-    </ClerkProvider>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/globals.css
-/*
-Global styles for the app.
-*/
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/db.ts
-/**
- * @file db.ts
- *
- * @description
- * Centralised Drizzle ORM client initialisation for Postgres, including a
- * schema map so Drizzle can infer strongly-typed query helpers.
- *
- * @notes
- * - Migrations are NOT generated here. Follow user instructions to run `drizzle-kit`.
- */
-
-import {
-  branchesTable,
-  branchSettingsTable,
-  consultHistoryTable,
-  organizationsTable,
-  profilesTable,
-  queueItemsTable
-} from "@/db/schema"
-import { config } from "dotenv"
-import { drizzle } from "drizzle-orm/postgres-js"
-import postgres from "postgres"
-
-config({ path: ".env.local" })
-
-/**
- * The schema object must include every pgTable we intend to query through
- * `db.query.<table>` helpers. Add new tables here whenever you create a
- * new schema file.
- */
-const schema = {
-  profiles: profilesTable,
-  organizations: organizationsTable,
-  branches: branchesTable, // Corrected key
-  queueItems: queueItemsTable,
-  consultHistory: consultHistoryTable,
-  branchSettings: branchSettingsTable // Corrected key
-} as const
-
-/**
- * Postgres connection using the DATABASE_URL environment variable.
- * `postgres()` returns a lazy client that opens the connection pool on
- * first query.
- */
-const client = postgres(process.env.DATABASE_URL!, {
-  idle_timeout: 60 // seconds – keep idle connections short for serverless
-})
-
-/**
- * Drizzle ORM instance—exported for use in server actions.
- */
-export const db = drizzle(client, { schema })
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/landing/hero.tsx
-/**
- * @file hero.tsx
- * @description This client component provides the hero section for the landing page.
- * It has been updated to remove dependencies on the 'magicui' components.
+ * @props
+ * - `initialData`: The initial queue details, including the queue item ID.
  */
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { motion } from "framer-motion"
-import { Rocket } from "lucide-react"
-import Link from "next/link"
+import { PublicQueueDetails } from "@/actions/db/queue_items_actions"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
+import { supabase } from "@/lib/supabase-client"
+import { RealtimeChannel } from "@supabase/supabase-js"
+import { Clock, User } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
-export const HeroSection = () => {
+interface PatientQueueViewProps {
+  initialData: PublicQueueDetails
+}
+
+export default function PatientQueueView({
+  initialData
+}: PatientQueueViewProps) {
+  const { position, estimatedWaitTimeMinutes } = initialData
+  const queueId = initialData.queueItem.id
+  const router = useRouter()
+
+  useEffect(() => {
+    // This channel listens for ANY change on the `queue_items` table.
+    // When a change occurs, we refresh data to get the latest position and wait time.
+    const channel: RealtimeChannel = supabase
+      .channel(`patient-view-${queueId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "queue_items" },
+        payload => {
+          console.log("Change received!", payload)
+          // A simple and robust way to get the latest calculated data
+          // is to have the server re-render and re-fetch.
+          router.refresh()
+        }
+      )
+      .subscribe()
+
+    // Unsubscribe when the component is unmounted
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queueId, router])
+
   return (
-    <div className="flex flex-col items-center justify-center px-8 pt-32 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="flex items-center justify-center"
-      >
-        <Link
-          href="https://github.com/mckaywrigley/o1-pro-template-system"
-          className="bg-muted mb-4 inline-block rounded-full px-4 py-1.5 text-sm"
-        >
-          View the code on GitHub
-        </Link>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-        className="mt-8 flex max-w-2xl flex-col items-center justify-center gap-6"
-      >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-          className="text-balance text-6xl font-bold"
-        >
-          QCare
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
-          className="max-w-xl text-balance text-xl"
-        >
-          A real-time, WhatsApp-driven queue-tracking system.
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8, ease: "easeOut" }}
-        >
-          <Link href="/signup">
-            <Button className="bg-blue-500 text-lg hover:bg-blue-600">
-              <Rocket className="mr-2 size-5" />
-              Get Started →
-            </Button>
-          </Link>
-        </motion.div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, delay: 1, ease: "easeOut" }}
-        className="bg-muted mx-auto mt-20 w-full max-w-screen-lg items-center justify-center rounded-lg border shadow-lg"
-      >
-        <img
-          src="/hero.png"
-          alt="Hero"
-          className="w-full rounded-md border shadow-lg"
-        />
-      </motion.div>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">
+            Welcome, {initialData.queueItem.patientName}!
+          </CardTitle>
+          <CardDescription>
+            Here is your current status in the queue. This page will update
+            automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-6 p-6 text-center">
+          <div className="flex flex-col items-center rounded-lg bg-blue-50 p-4">
+            <User className="mb-2 size-8 text-blue-500" />
+            <p className="text-muted-foreground text-sm">You are number</p>
+            <p className="text-4xl font-bold text-blue-600">{position}</p>
+            <p className="text-muted-foreground text-sm">in line</p>
+          </div>
+          <div className="flex flex-col items-center rounded-lg bg-green-50 p-4">
+            <Clock className="mb-2 size-8 text-green-500" />
+            <p className="text-muted-foreground text-sm">Estimated wait is</p>
+            <p className="text-4xl font-bold text-green-600">
+              {estimatedWaitTimeMinutes}
+            </p>
+            <p className="text-muted-foreground text-sm">minutes</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/landing/footer.tsx
-/*
-This server component provides the footer for the app.
-*/
-
-import { Github, Twitter } from "lucide-react"
-import Link from "next/link"
-
-export async function Footer() {
-  return (
-    <footer className="border-t">
-      <div className="container mx-auto max-w-7xl px-4 py-12 md:px-6">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold">Company</h3>
-            <div className="flex flex-col gap-2">
-              <Link
-                href="/about"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                About
-              </Link>
-              <Link
-                href="/blog"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Blog
-              </Link>
-              <Link
-                href="/careers"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Careers
-              </Link>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold">Product</h3>
-            <div className="flex flex-col gap-2">
-              <Link
-                href="/features"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Features
-              </Link>
-              <Link
-                href="/pricing"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Pricing
-              </Link>
-              <Link
-                href="/docs"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Documentation
-              </Link>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold">Resources</h3>
-            <div className="flex flex-col gap-2">
-              <Link
-                href="/support"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Support
-              </Link>
-              <Link
-                href="/terms"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Terms
-              </Link>
-              <Link
-                href="/privacy"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Privacy
-              </Link>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold">Social</h3>
-            <div className="flex gap-4">
-              <Link
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Github className="text-muted-foreground hover:text-foreground size-6 transition" />
-              </Link>
-              <Link
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Twitter className="text-muted-foreground hover:text-foreground size-6 transition" />
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-muted-foreground mt-12 pt-8 text-center">
-          <p>
-            &copy; {new Date().getFullYear()} Your Company. All rights reserved.
-          </p>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
+```
 
 File: /Users/dev/Desktop/project/qcare-mvp/components/landing/header.tsx
+```tsx
 /*
 This client component provides the header for the app.
 */
@@ -3300,1540 +4842,136 @@ export default function Header() {
   )
 }
 
+```
 
-File: /Users/dev/Desktop/project/qcare-mvp/components/magicui/animated-gradient-text.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/types/server-action-types.ts
+```ts
 /*
-This client component provides an animated gradient text.
+Contains the general server action types.
 */
 
-import { ReactNode } from "react"
+export type ActionState<T> =
+  | { isSuccess: true; message: string; data: T }
+  | { isSuccess: false; message: string; data?: never }
 
-import { cn } from "@/lib/utils"
+```
 
-export default function AnimatedGradientText({
-  children,
-  className
-}: {
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <div
-      className={cn(
-        "group relative mx-auto flex max-w-fit flex-row items-center justify-center rounded-2xl bg-white/40 px-4 py-1.5 text-sm font-medium shadow-[inset_0_-8px_10px_#8fdfff1f] backdrop-blur-sm transition-shadow duration-500 ease-out [--bg-size:300%] hover:shadow-[inset_0_-5px_10px_#8fdfff3f] dark:bg-black/40",
-        className
-      )}
-    >
-      <div
-        className={`animate-gradient absolute inset-0 block size-full bg-gradient-to-r from-[#ffaa40]/50 via-[#9c40ff]/50 to-[#ffaa40]/50 bg-[length:var(--bg-size)_100%] p-[1px] [border-radius:inherit] ![mask-composite:subtract] [mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)]`}
-      />
-
-      {children}
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/magicui/hero-video-dialog.tsx
-/*
-This client component provides a video dialog for the hero section.
-*/
-
-"use client"
-
-import { AnimatePresence, motion } from "framer-motion"
-import { Play, XIcon } from "lucide-react"
-import { useState } from "react"
-
-import { cn } from "@/lib/utils"
-
-type AnimationStyle =
-  | "from-bottom"
-  | "from-center"
-  | "from-top"
-  | "from-left"
-  | "from-right"
-  | "fade"
-  | "top-in-bottom-out"
-  | "left-in-right-out"
-
-interface HeroVideoProps {
-  animationStyle?: AnimationStyle
-  videoSrc: string
-  thumbnailSrc: string
-  thumbnailAlt?: string
-  className?: string
-}
-
-const animationVariants = {
-  "from-bottom": {
-    initial: { y: "100%", opacity: 0 },
-    animate: { y: 0, opacity: 1 },
-    exit: { y: "100%", opacity: 0 }
-  },
-  "from-center": {
-    initial: { scale: 0.5, opacity: 0 },
-    animate: { scale: 1, opacity: 1 },
-    exit: { scale: 0.5, opacity: 0 }
-  },
-  "from-top": {
-    initial: { y: "-100%", opacity: 0 },
-    animate: { y: 0, opacity: 1 },
-    exit: { y: "-100%", opacity: 0 }
-  },
-  "from-left": {
-    initial: { x: "-100%", opacity: 0 },
-    animate: { x: 0, opacity: 1 },
-    exit: { x: "-100%", opacity: 0 }
-  },
-  "from-right": {
-    initial: { x: "100%", opacity: 0 },
-    animate: { x: 0, opacity: 1 },
-    exit: { x: "100%", opacity: 0 }
-  },
-  fade: {
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    exit: { opacity: 0 }
-  },
-  "top-in-bottom-out": {
-    initial: { y: "-100%", opacity: 0 },
-    animate: { y: 0, opacity: 1 },
-    exit: { y: "100%", opacity: 0 }
-  },
-  "left-in-right-out": {
-    initial: { x: "-100%", opacity: 0 },
-    animate: { x: 0, opacity: 1 },
-    exit: { x: "100%", opacity: 0 }
-  }
-}
-
-export default function HeroVideoDialog({
-  animationStyle = "from-center",
-  videoSrc,
-  thumbnailSrc,
-  thumbnailAlt = "Video thumbnail",
-  className
-}: HeroVideoProps) {
-  const [isVideoOpen, setIsVideoOpen] = useState(false)
-  const selectedAnimation = animationVariants[animationStyle]
-
-  return (
-    <div className={cn("relative", className)}>
-      <div
-        className="group relative cursor-pointer"
-        onClick={() => setIsVideoOpen(true)}
-      >
-        <img
-          src={thumbnailSrc}
-          alt={thumbnailAlt}
-          width={1920}
-          height={1080}
-          className="w-full rounded-md border shadow-lg transition-all duration-200 ease-out group-hover:brightness-[0.8]"
-        />
-        <div className="absolute inset-0 flex scale-[0.9] items-center justify-center rounded-2xl transition-all duration-200 ease-out group-hover:scale-100">
-          <div className="bg-primary/10 flex size-28 items-center justify-center rounded-full backdrop-blur-md">
-            <div
-              className={`from-primary/30 to-primary relative flex size-20 scale-100 items-center justify-center rounded-full bg-gradient-to-b shadow-md transition-all duration-200 ease-out group-hover:scale-[1.2]`}
-            >
-              <Play
-                className="size-8 scale-100 fill-white text-white transition-transform duration-200 ease-out group-hover:scale-105"
-                style={{
-                  filter:
-                    "drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))"
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      <AnimatePresence>
-        {isVideoOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            onClick={() => setIsVideoOpen(false)}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md"
-          >
-            <motion.div
-              {...selectedAnimation}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="relative mx-4 aspect-video w-full max-w-4xl md:mx-0"
-            >
-              <motion.button className="absolute -top-16 right-0 rounded-full bg-neutral-900/50 p-2 text-xl text-white ring-1 backdrop-blur-md dark:bg-neutral-100/50 dark:text-black">
-                <XIcon className="size-5" />
-              </motion.button>
-              <div className="relative isolate z-[1] size-full overflow-hidden rounded-2xl border-2 border-white">
-                <iframe
-                  src={videoSrc}
-                  className="size-full rounded-2xl"
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                ></iframe>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-mobile.tsx
-/*
-Hook to check if the user is on a mobile device.
-*/
-
-import * as React from "react"
-
-const MOBILE_BREAKPOINT = 768
-
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return !!isMobile
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-copy-to-clipboard.tsx
-/*
-Hook for copying text to the clipboard.
-*/
-
-"use client"
-
-import { useState } from "react"
-
-export interface useCopyToClipboardProps {
-  timeout?: number
-}
-
-export function useCopyToClipboard({
-  timeout = 2000
-}: useCopyToClipboardProps) {
-  const [isCopied, setIsCopied] = useState<Boolean>(false)
-
-  const copyToClipboard = (value: string) => {
-    if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
-      return
-    }
-
-    if (!value) {
-      return
-    }
-
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true)
-
-      setTimeout(() => {
-        setIsCopied(false)
-      }, timeout)
-    })
-  }
-
-  return { isCopied, copyToClipboard }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/lib/hooks/use-toast.ts
-/*
-Hook to display toast notifications.
-*/
-
-"use client"
-
-// Inspired by react-hot-toast library
-import * as React from "react"
-
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
-type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-}
-
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST"
-} as const
-
-let count = 0
-
-function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
-}
-
-type ActionType = typeof actionTypes
-
-type Action =
-  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
-  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
-  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
-  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
-
-interface State {
-  toasts: ToasterToast[]
-}
-
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
-  }, TOAST_REMOVE_DELAY)
-
-  toastTimeouts.set(toastId, timeout)
-}
-
-export const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
-      }
-
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        )
-      }
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach(toast => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map(t =>
-          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
-        )
-      }
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return { ...state, toasts: [] }
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter(t => t.id !== action.toastId)
-      }
-  }
-}
-
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach(listener => {
-    listener(memoryState)
-  })
-}
-
-type Toast = Omit<ToasterToast, "id">
-
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: open => {
-        if (!open) dismiss()
-      }
-    }
-  })
-
-  return { id: id, dismiss, update }
-}
-
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
-
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [state])
-
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId })
-  }
-}
-
-export { toast, useToast }
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/actions/db/queue_items_actions.ts
+File: /Users/dev/Desktop/project/qcare-mvp/db/schema/index.ts
+```ts
 /**
- * @file queue-items-actions.ts
- *
- * @description
- * Server actions for managing the `queue_items` table. This includes operations
- * such as creating, reordering, and updating the status of queue items. These
- * actions encapsulate the database logic and are designed to be securely called
- * from client components. This file now also includes logic to trigger proximity
- * alerts via WhatsApp.
- *
- * @dependencies
- * - `drizzle-orm`: For database queries.
- * - `db/schema/queue-items-schema.ts`: For table and type definitions.
- * - `types/server-action-types.ts`: For the `ActionState` return type.
- * - `actions/twilio-actions.ts`: For sending WhatsApp messages.
- * - `actions/db/branch-settings-actions.ts`: For retrieving alert thresholds.
- */
-"use server"
-
-import { db } from "@/db/db"
-import {
-  consultHistoryTable,
-  InsertQueueItem,
-  queueItemsTable,
-  queueStatusEnum,
-  SelectQueueItem
-} from "@/db/schema"
-import { ActionState } from "@/types"
-import { and, asc, desc, eq, gte } from "drizzle-orm"
-import { startOfDay } from "date-fns"
-import { revalidatePath } from "next/cache"
-import { createConsultHistoryAction } from "./consult_history_actions"
-import { getBranchSettingsAction } from "./branch-settings-actions"
-import { sendWhatsAppMessageAction } from "@/actions/twilio-actions"
-
-/**
- * The input type for creating a new queue item, omitting fields that are
- * managed by the server (e.g., id, status, position).
- */
-type CreateQueueItemInput = Omit<
-  InsertQueueItem,
-  "id" | "status" | "position" | "createdAt" | "updatedAt"
->
-
-/**
- * The input type for registering a new patient, which is a subset of the
- * full queue item creation input.
- */
-export interface RegisterPatientInput {
-  patientName: string
-  phone?: string | null
-  reason?: string | null
-  branchId: string
-  doctorId?: string | null
-}
-
-/**
- * The input type for reordering items, specifying the unique identifier
- * and the new desired position for each item.
- */
-interface ReorderQueueItem {
-  id: string
-  position: number
-}
-
-/**
- * A union type for the Drizzle client, allowing helper functions to be used
- * either standalone or within a transaction.
- */
-type DbOrTxClient =
-  | typeof db
-  | Parameters<Parameters<typeof db.transaction>[0]>[0]
-
-// =================================================================================
-// H E L P E R S
-// =================================================================================
-
-/**
- * @function checkAndSendProximityAlerts
- * @description Checks the waitlist for a given branch and sends "You're next" or
- * "You are N spots away" WhatsApp notifications to patients who have reached the
- * configured alert threshold.
- * @param {string} branchId - The ID of the branch to check.
- * @param {DbOrTxClient} tx - The Drizzle transaction client.
- */
-async function checkAndSendProximityAlerts(
-  branchId: string,
-  tx: DbOrTxClient
-) {
-  try {
-    // 1. Get branch-specific alert settings
-    const settingsResult = await getBranchSettingsAction(branchId, tx)
-    if (!settingsResult.isSuccess || !settingsResult.data) {
-      console.error(
-        `Could not retrieve settings for branch ${branchId}. Alerts will not be sent.`
-      )
-      return
-    }
-    const { alertThreshold } = settingsResult.data
-
-    // 2. Get the current waitlist, up to the alert threshold
-    const waitlist = await tx.query.queueItems.findMany({
-      where: and(
-        eq(queueItemsTable.branchId, branchId),
-        eq(queueItemsTable.status, "WAITLIST")
-      ),
-      orderBy: [asc(queueItemsTable.position)],
-      limit: alertThreshold // Only fetch patients within the alert range
-    })
-
-    // 3. Iterate and send alerts
-    for (const patient of waitlist) {
-      if (!patient.phone) {
-        continue // Cannot notify without a phone number
-      }
-
-      const position = patient.position + 1 // Display as 1-based index
-
-      if (position <= alertThreshold) {
-        let messageBody = ""
-        if (position === 1) {
-          messageBody = "You are next – please check in at reception."
-        } else {
-          messageBody = `Your turn is near! You are now #${position} in the queue.`
-        }
-
-        // Asynchronously send the message; do not block the transaction.
-        sendWhatsAppMessageAction({
-          to: patient.phone,
-          body: messageBody
-        }).then(result => {
-          if (!result.isSuccess) {
-            console.error(
-              `Failed to send proximity alert to ${patient.phone}: ${result.message}`
-            )
-          }
-        })
-      }
-    }
-  } catch (error) {
-    console.error("Error during proximity alert check:", error)
-  }
-}
-
-// =================================================================================
-// C R E A T E
-// =================================================================================
-
-export async function createQueueItemAction(
-  data: CreateQueueItemInput
-): Promise<ActionState<SelectQueueItem>> {
-  try {
-    const newQueueItem = await db.transaction(async tx => {
-      const [lastQueueItem] = await tx
-        .select({ position: queueItemsTable.position })
-        .from(queueItemsTable)
-        .where(
-          and(
-            eq(queueItemsTable.branchId, data.branchId),
-            eq(queueItemsTable.status, "WAITLIST")
-          )
-        )
-        .orderBy(desc(queueItemsTable.position))
-        .limit(1)
-
-      const newPosition = lastQueueItem ? lastQueueItem.position + 1 : 0
-
-      const [insertedItem] = await tx
-        .insert(queueItemsTable)
-        .values({
-          ...data,
-          status: "WAITLIST",
-          position: newPosition
-        })
-        .returning()
-
-      return insertedItem
-    })
-
-    revalidatePath("/reception")
-
-    return {
-      isSuccess: true,
-      message: "Patient added to queue successfully.",
-      data: newQueueItem
-    }
-  } catch (error) {
-    console.error("Error creating queue item:", error)
-    if (error instanceof Error) {
-      return { isSuccess: false, message: error.message }
-    }
-    return { isSuccess: false, message: "Failed to add patient to the queue." }
-  }
-}
-
-/**
- * @function registerPatientAction
- * @description Orchestrates the entire patient registration process. It creates the
- * queue item and then sends an initial WhatsApp notification with queue details.
- * @param {RegisterPatientInput} data - The patient's details from the registration form.
- * @returns {Promise<ActionState<SelectQueueItem>>} The result of the operation, containing the newly created queue item on success.
- */
-export async function registerPatientAction(
-  data: RegisterPatientInput
-): Promise<ActionState<SelectQueueItem>> {
-  // Step 1: Create the queue item in the database.
-  const createResult = await createQueueItemAction(data)
-
-  if (!createResult.isSuccess) {
-    return createResult // Propagate the error message from the create action.
-  }
-
-  const newQueueItem = createResult.data
-
-  // Step 2: If a phone number is provided, attempt to send a WhatsApp notification.
-  if (newQueueItem.phone) {
-    // Fetch the public details to get position and wait time for the message.
-    const detailsResult = await getPublicQueueItemDetailsAction(newQueueItem.id)
-
-    if (detailsResult.isSuccess) {
-      const { position, estimatedWaitTimeMinutes } = detailsResult.data
-      const welcomeMessage = `Welcome, ${newQueueItem.patientName}! Your estimated wait is ${estimatedWaitTimeMinutes} min and you are #${position} in line. View your status: ${process.env.NEXT_PUBLIC_BASE_URL}/q/${newQueueItem.id}`
-
-      // Send the message. We don't block the main return path on this,
-      // but we log errors if it fails.
-      sendWhatsAppMessageAction({
-        to: newQueueItem.phone,
-        body: welcomeMessage
-      }).then(notificationResult => {
-        if (!notificationResult.isSuccess) {
-          console.error(
-            `Failed to send WhatsApp notification for queue item ${newQueueItem.id}: ${notificationResult.message}`
-          )
-        }
-      })
-    } else {
-      console.error(
-        `Could not fetch public details for new queue item ${newQueueItem.id} to send notification.`
-      )
-    }
-  }
-
-  // The primary action is successful even if the notification fails.
-  return {
-    isSuccess: true,
-    message: "Patient registered successfully.",
-    data: newQueueItem
-  }
-}
-
-// =================================================================================
-// R E A D
-// =================================================================================
-
-export interface PublicQueueDetails {
-  queueItem: SelectQueueItem
-  position: number
-  estimatedWaitTimeMinutes: number
-}
-
-export async function getPublicQueueItemDetailsAction(
-  queueItemId: string
-): Promise<ActionState<PublicQueueDetails>> {
-  try {
-    const [item] = await db
-      .select()
-      .from(queueItemsTable)
-      .where(eq(queueItemsTable.id, queueItemId))
-
-    if (!item) {
-      return { isSuccess: false, message: "Queue entry not found." }
-    }
-
-    if (item.status !== "WAITLIST") {
-      return {
-        isSuccess: false,
-        message: `Your consultation status is: ${item.status}.`
-      }
-    }
-
-    const { branchId } = item
-
-    const waitlist = await db.query.queueItems.findMany({
-      where: and(
-        eq(queueItemsTable.branchId, branchId),
-        eq(queueItemsTable.status, "WAITLIST")
-      ),
-      orderBy: [asc(queueItemsTable.position)]
-    })
-
-    const position = waitlist.findIndex(i => i.id === queueItemId)
-
-    const sampleSize = parseInt(process.env.WAIT_ESTIMATE_SAMPLE_SIZE || "5")
-    const recentConsults = await db
-      .select({ duration: consultHistoryTable.consultDurationSeconds })
-      .from(consultHistoryTable)
-      .where(eq(consultHistoryTable.branchId, branchId))
-      .orderBy(desc(consultHistoryTable.createdAt))
-      .limit(sampleSize)
-
-    let avgConsultTimeSeconds = 15 * 60 // Default to 15 mins
-    if (recentConsults.length > 0) {
-      const totalDuration = recentConsults.reduce(
-        (sum, consult) => sum + consult.duration,
-        0
-      )
-      avgConsultTimeSeconds = totalDuration / recentConsults.length
-    }
-
-    const estimatedWaitTimeMinutes = Math.round(
-      (position * avgConsultTimeSeconds) / 60
-    )
-
-    return {
-      isSuccess: true,
-      message: "Queue details retrieved.",
-      data: {
-        queueItem: item,
-        position: position + 1, // Return 1-based index for display
-        estimatedWaitTimeMinutes
-      }
-    }
-  } catch (error) {
-    console.error("Error getting public queue details:", error)
-    return { isSuccess: false, message: "Failed to retrieve queue details." }
-  }
-}
-
-export async function getQueueItemsByBranchAction(
-  branchId: string
-): Promise<ActionState<SelectQueueItem[]>> {
-  try {
-    const items = await db.query.queueItems.findMany({
-      where: eq(queueItemsTable.branchId, branchId),
-      orderBy: [asc(queueItemsTable.status), asc(queueItemsTable.position)]
-    })
-
-    return {
-      isSuccess: true,
-      message: "Queue items retrieved successfully.",
-      data: items
-    }
-  } catch (error) {
-    console.error("Error retrieving queue items:", error)
-    if (error instanceof Error) {
-      return { isSuccess: false, message: error.message }
-    }
-    return { isSuccess: false, message: "Failed to retrieve queue items." }
-  }
-}
-
-export async function getQueueItemsByDoctorIdAction(
-  branchId: string,
-  doctorId: string
-): Promise<ActionState<SelectQueueItem[]>> {
-  try {
-    const todayStart = startOfDay(new Date())
-    const items = await db.query.queueItems.findMany({
-      where: and(
-        eq(queueItemsTable.branchId, branchId),
-        eq(queueItemsTable.doctorId, doctorId),
-        eq(queueItemsTable.status, "WAITLIST"),
-        gte(queueItemsTable.createdAt, todayStart)
-      ),
-      orderBy: [asc(queueItemsTable.position)]
-    })
-
-    return {
-      isSuccess: true,
-      message: `Queue for Dr. ${doctorId} retrieved successfully.`,
-      data: items
-    }
-  } catch (error) {
-    console.error("Error retrieving doctor's queue items:", error)
-    if (error instanceof Error) {
-      return { isSuccess: false, message: error.message }
-    }
-    return { isSuccess: false, message: "Failed to retrieve doctor's queue." }
-  }
-}
-
-// =================================================================================
-// U P D A T E
-// =================================================================================
-
-export async function reorderQueueAction(
-  items: ReorderQueueItem[]
-): Promise<ActionState<void>> {
-  try {
-    await db.transaction(async tx => {
-      if (items.length === 0) {
-        return
-      }
-
-      const updatePromises = items.map(item =>
-        tx
-          .update(queueItemsTable)
-          .set({ position: item.position })
-          .where(eq(queueItemsTable.id, item.id))
-      )
-      await Promise.all(updatePromises)
-
-      const [firstItem] = await tx
-        .select({ branchId: queueItemsTable.branchId })
-        .from(queueItemsTable)
-        .where(eq(queueItemsTable.id, items[0].id))
-        .limit(1)
-
-      if (firstItem && firstItem.branchId) {
-        await checkAndSendProximityAlerts(firstItem.branchId, tx)
-      }
-    })
-
-    revalidatePath("/reception")
-
-    return {
-      isSuccess: true,
-      message: "Queue reordered successfully.",
-      data: undefined
-    }
-  } catch (error) {
-    console.error("Error reordering queue:", error)
-    if (error instanceof Error) {
-      return { isSuccess: false, message: error.message }
-    }
-    return { isSuccess: false, message: "Failed to reorder the queue." }
-  }
-}
-
-export async function updateQueueStatusAction(
-  queueItemId: string,
-  newStatus: (typeof queueStatusEnum.enumValues)[number]
-): Promise<ActionState<SelectQueueItem>> {
-  try {
-    const updatedItem = await db.transaction(async tx => {
-      const [currentItem] = await tx
-        .select()
-        .from(queueItemsTable)
-        .where(eq(queueItemsTable.id, queueItemId))
-
-      if (!currentItem) {
-        throw new Error("Queue item not found.")
-      }
-
-      if (newStatus === "COMPLETE" && currentItem.status === "SERVING") {
-        const completionTime = new Date()
-        const consultStartTime = currentItem.updatedAt
-        const registrationTime = currentItem.createdAt
-
-        const waitDurationSeconds = Math.round(
-          (consultStartTime.getTime() - registrationTime.getTime()) / 1000
-        )
-        const consultDurationSeconds = Math.round(
-          (completionTime.getTime() - consultStartTime.getTime()) / 1000
-        )
-
-        const historyResult = await createConsultHistoryAction({
-          data: {
-            queueItemId: currentItem.id,
-            branchId: currentItem.branchId,
-            waitDurationSeconds,
-            consultDurationSeconds
-          },
-          tx
-        })
-
-        if (!historyResult.isSuccess) {
-          throw new Error(
-            `Failed to log consultation history: ${historyResult.message}`
-          )
-        }
-      }
-
-      const newPosition =
-        newStatus === "COMPLETE" || newStatus === "CANCELLED"
-          ? -1
-          : currentItem.position
-
-      const [updated] = await tx
-        .update(queueItemsTable)
-        .set({ status: newStatus, position: newPosition })
-        .where(eq(queueItemsTable.id, queueItemId))
-        .returning()
-
-      if (
-        (newStatus === "COMPLETE" || newStatus === "CANCELLED") &&
-        currentItem.status !== "COMPLETE" &&
-        currentItem.status !== "CANCELLED"
-      ) {
-        await checkAndSendProximityAlerts(currentItem.branchId, tx)
-      }
-
-      return updated
-    })
-
-    if (!updatedItem) {
-      return { isSuccess: false, message: "Could not update queue item." }
-    }
-
-    revalidatePath("/reception")
-    revalidatePath("/doctor")
-
-    return {
-      isSuccess: true,
-      message: `Status updated successfully to ${newStatus}.`,
-      data: updatedItem
-    }
-  } catch (error) {
-    console.error("Error updating queue status:", error)
-    if (error instanceof Error) {
-      return { isSuccess: false, message: error.message }
-    }
-    return {
-      isSuccess: false,
-      message: "An unknown error occurred while updating status."
-    }
-  }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/actions/db/analytics-actions.ts
-/**
- * @file analytics-actions.ts
+ * @file index.ts
  *
  * @description
- * This file contains server actions dedicated to fetching and processing
- * analytics data from the `consult_history` table. These actions are designed
- * to be called from the Admin Dashboard and are scoped by branch.
+ *  Barrel file that re‑exports every Drizzle schema in `db/schema`.
+ *  The order of exports is not important but keeping them alphabetical
+ *  improves merge resolution.
  */
-"use server"
-
-import { db } from "@/db/db"
-import { consultHistoryTable, SelectConsultHistory } from "@/db/schema"
-import { ActionState } from "@/types"
-import { and, avg, desc, eq, gte } from "drizzle-orm"
-import { startOfDay, subDays } from "date-fns"
-import { stringify } from "csv-stringify" // Corrected import
-
-interface AverageTimes {
-  avgWaitSeconds: number
-  avgConsultSeconds: number
-}
-
-export async function getDailyAverageWaitTimesAction(
-  branchId: string
-): Promise<ActionState<AverageTimes>> {
-  try {
-    const todayStart = startOfDay(new Date())
-
-    const [result] = await db
-      .select({
-        avgWait: avg(consultHistoryTable.waitDurationSeconds),
-        avgConsult: avg(consultHistoryTable.consultDurationSeconds)
-      })
-      .from(consultHistoryTable)
-      .where(
-        and(
-          eq(consultHistoryTable.branchId, branchId),
-          gte(consultHistoryTable.createdAt, todayStart)
-        )
-      )
-
-    return {
-      isSuccess: true,
-      message: "Daily average times retrieved successfully.",
-      data: {
-        avgWaitSeconds: result.avgWait
-          ? Math.round(parseFloat(result.avgWait))
-          : 0,
-        avgConsultSeconds: result.avgConsult
-          ? Math.round(parseFloat(result.avgConsult))
-          : 0
-      }
-    }
-  } catch (error) {
-    console.error("Error getting daily average wait times:", error)
-    return {
-      isSuccess: false,
-      message: "Failed to retrieve daily average wait times."
-    }
-  }
-}
-
-export async function getConsultHistoryForExportAction(
-  branchId: string
-): Promise<ActionState<SelectConsultHistory[]>> {
-  try {
-    const thirtyDaysAgo = subDays(new Date(), 30)
-
-    const history = await db.query.consultHistory.findMany({
-      where: and(
-        eq(consultHistoryTable.branchId, branchId),
-        gte(consultHistoryTable.createdAt, thirtyDaysAgo)
-      ),
-      orderBy: [desc(consultHistoryTable.createdAt)]
-    })
-
-    return {
-      isSuccess: true,
-      message: "Consultation history for export retrieved successfully.",
-      data: history
-    }
-  } catch (error) {
-    console.error("Error getting consultation history for export:", error)
-    return {
-      isSuccess: false,
-      message: "Failed to retrieve consultation history for export."
-    }
-  }
-}
 
 /**
- * @function exportConsultHistoryAction
- * @description Fetches consultation history for a branch and converts it to a CSV string.
- * @param {string} branchId - The UUID of the branch.
- * @returns {Promise<ActionState<{ csv: string }>>} The generated CSV content.
- */
-export async function exportConsultHistoryAction(
-  branchId: string
-): Promise<ActionState<{ csv: string }>> {
-  const historyResult = await getConsultHistoryForExportAction(branchId)
-
-  if (!historyResult.isSuccess) {
-    return historyResult
-  }
-
-  if (historyResult.data.length === 0) {
-    return { isSuccess: false, message: "No history to export." }
-  }
-
-  try {
-    const csvString = await new Promise<string>((resolve, reject) => {
-      stringify(
-        historyResult.data,
-        { header: true },
-        (err, stringified) => {
-          if (err) {
-            return reject(err)
-          }
-          if (stringified) {
-            return resolve(stringified)
-          }
-          return reject(
-            new Error("CSV stringification resulted in undefined value.")
-          )
-        }
-      )
-    })
-
-    return {
-      isSuccess: true,
-      message: "CSV content generated successfully.",
-      data: { csv: csvString }
-    }
-  } catch (error) {
-    console.error("Error generating CSV string:", error)
-    return { isSuccess: false, message: "Failed to generate CSV." }
-  }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/actions/db/consult_history_actions.ts
-/**
- * @file consult-history-actions.ts
+ * @file index.ts
  *
  * @description
- * Server actions for managing the `consult_history` table. This includes
- * creating, and in the future, reading or deleting consultation history records.
- *
- * @see
- * - `db/schema/consult-history-schema.ts` for table and type definitions.
+ * Barrel file that re-exports every Drizzle schema in `db/schema`.
+ * The order of exports is not important but keeping them alphabetical
+ * improves merge resolution.
  */
-"use server"
+// "use server"
 
-import { db } from "@/db/db"
-import {
-  consultHistoryTable,
-  InsertConsultHistory,
-  SelectConsultHistory
-} from "@/db/schema"
-import { ActionState } from "@/types"
+export * from "./organization-schema"
+export * from "./branches-schema"
+export * from "./branches-settings-schema"
+export * from "./consult-history-schema"
+export * from "./profiles-schema"
+export * from "./queue-items-schema"
+```
 
-/**
- * Defines a union type that can accept either the main Drizzle `db` client or
- * the client from within a `db.transaction(async (tx) => {})` block.
- * This allows the action to be composable and used within other transactions.
- */
-type DbOrTxClient =
-  | typeof db
-  | Parameters<Parameters<typeof db.transaction>[0]>[0]
-
-// The input interface now uses the flexible DbOrTxClient type.
-interface CreateHistoryInput {
-  data: InsertConsultHistory
-  tx?: DbOrTxClient
-}
-
-/**
- * @function createConsultHistoryAction
- * @description Creates a new record in the `consult_history` table. Can be
- * used within a larger database transaction by passing the transaction client.
- *
- * @param {CreateHistoryInput} { data, tx } - An object containing the data and
- * an optional Drizzle transaction client.
- *
- * @returns {Promise<ActionState<SelectConsultHistory>>} An `ActionState` object
- * containing the result of the operation.
- */
-export async function createConsultHistoryAction({
-  data,
-  tx
-}: CreateHistoryInput): Promise<ActionState<SelectConsultHistory>> {
-  try {
-    // Use the transaction client if it's passed, otherwise use the global db client.
-    const dbClient = tx || db
-
-    const [newHistory] = await dbClient
-      .insert(consultHistoryTable)
-      .values(data)
-      .returning()
-
-    return {
-      isSuccess: true,
-      message: "Consultation history created successfully.",
-      data: newHistory
-    }
-  } catch (error) {
-    console.error("Error creating consult history:", error)
-    if (error instanceof Error) {
-      return { isSuccess: false, message: error.message }
-    }
-    return {
-      isSuccess: false,
-      message: "Failed to create consultation history."
-    }
-  }
-}
-
-File: /Users/dev/Desktop/project/qcare-mvp/actions/db/profiles-actions.ts
+File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
+```tsx
 /*
-Contains server actions related to profiles in the DB.
-*/
-
-"use server"
-
-import { db } from "@/db/db"
-import {
-  InsertProfile,
-  profilesTable,
-  SelectProfile
-} from "@/db/schema/profiles-schema"
-import { ActionState } from "@/types"
-import { eq } from "drizzle-orm"
-
-export async function createProfileAction(
-  data: InsertProfile
-): Promise<ActionState<SelectProfile>> {
-  try {
-    const [newProfile] = await db.insert(profilesTable).values(data).returning()
-    return {
-      isSuccess: true,
-      message: "Profile created successfully",
-      data: newProfile
-    }
-  } catch (error) {
-    console.error("Error creating profile:", error)
-    return { isSuccess: false, message: "Failed to create profile" }
-  }
-}
-
-export async function getProfileByUserIdAction(
-  userId: string
-): Promise<ActionState<SelectProfile>> {
-  try {
-    const profile = await db.query.profiles.findFirst({
-      where: eq(profilesTable.userId, userId)
-    })
-    if (!profile) {
-      return { isSuccess: false, message: "Profile not found" }
-    }
-
-    return {
-      isSuccess: true,
-      message: "Profile retrieved successfully",
-      data: profile
-    }
-  } catch (error) {
-    console.error("Error getting profile by user id", error)
-    return { isSuccess: false, message: "Failed to get profile" }
-  }
-}
-
-export async function updateProfileAction(
-  userId: string,
-  data: Partial<InsertProfile>
-): Promise<ActionState<SelectProfile>> {
-  try {
-    const [updatedProfile] = await db
-      .update(profilesTable)
-      .set(data)
-      .where(eq(profilesTable.userId, userId))
-      .returning()
-
-    if (!updatedProfile) {
-      return { isSuccess: false, message: "Profile not found to update" }
-    }
-
-    return {
-      isSuccess: true,
-      message: "Profile updated successfully",
-      data: updatedProfile
-    }
-  } catch (error) {
-    console.error("Error updating profile:", error)
-    return { isSuccess: false, message: "Failed to update profile" }
-  }
-}
-
-export async function updateProfileByStripeCustomerIdAction(
-  stripeCustomerId: string,
-  data: Partial<InsertProfile>
-): Promise<ActionState<SelectProfile>> {
-  try {
-    const [updatedProfile] = await db
-      .update(profilesTable)
-      .set(data)
-      .where(eq(profilesTable.stripeCustomerId, stripeCustomerId))
-      .returning()
-
-    if (!updatedProfile) {
-      return {
-        isSuccess: false,
-        message: "Profile not found by Stripe customer ID"
-      }
-    }
-
-    return {
-      isSuccess: true,
-      message: "Profile updated by Stripe customer ID successfully",
-      data: updatedProfile
-    }
-  } catch (error) {
-    console.error("Error updating profile by stripe customer ID:", error)
-    return {
-      isSuccess: false,
-      message: "Failed to update profile by Stripe customer ID"
-    }
-  }
-}
-
-export async function deleteProfileAction(
-  userId: string
-): Promise<ActionState<void>> {
-  try {
-    await db.delete(profilesTable).where(eq(profilesTable.userId, userId))
-    return {
-      isSuccess: true,
-      message: "Profile deleted successfully",
-      data: undefined
-    }
-  } catch (error) {
-    console.error("Error deleting profile:", error)
-    return { isSuccess: false, message: "Failed to delete profile" }
-  }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/layout.tsx
-/*
-This server layout provides a centered layout for (auth) pages.
-*/
-
-"use server"
-
-interface AuthLayoutProps {
-  children: React.ReactNode
-}
-
-export default async function AuthLayout({ children }: AuthLayoutProps) {
-  return (
-    <div className="flex h-screen items-center justify-center">{children}</div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/tailwind-indicator.tsx
-/*
-This server component provides a tailwind indicator for the app in dev mode.
-*/
-
-"use server"
-
-export async function TailwindIndicator() {
-  // Don't show in production
-  if (process.env.NODE_ENV === "production") return null
-
-  return (
-    <div className="fixed bottom-12 left-3 z-50 flex size-6 items-center justify-center rounded-full bg-gray-800 p-3 font-mono text-xs text-white">
-      <div className="block sm:hidden">xs</div>
-      <div className="hidden sm:block md:hidden">sm</div>
-      <div className="hidden md:block lg:hidden">md</div>
-      <div className="hidden lg:block xl:hidden">lg</div>
-      <div className="hidden xl:block 2xl:hidden">xl</div>
-      <div className="hidden 2xl:block">2xl</div>
-    </div>
-  )
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/theme-switcher.tsx
-/*
-This client component provides a theme switcher for the app.
+This client page provides the signup form from Clerk.
 */
 
 "use client"
 
-import { cn } from "@/lib/utils"
-import { Moon, Sun } from "lucide-react"
+import { SignUp } from "@clerk/nextjs"
+import { dark } from "@clerk/themes"
 import { useTheme } from "next-themes"
-import { HTMLAttributes, ReactNode } from "react"
 
-interface ThemeSwitcherProps extends HTMLAttributes<HTMLDivElement> {
-  children?: ReactNode
-}
-
-export const ThemeSwitcher = ({ children, ...props }: ThemeSwitcherProps) => {
-  const { setTheme, theme } = useTheme()
-
-  const handleChange = (theme: "dark" | "light") => {
-    localStorage.setItem("theme", theme)
-    setTheme(theme)
-  }
+export default function SignUpPage() {
+  const { theme } = useTheme()
 
   return (
-    <div
-      className={cn(
-        "p-1 hover:cursor-pointer hover:opacity-50",
-        props.className
-      )}
-      onClick={() => handleChange(theme === "light" ? "dark" : "light")}
-    >
-      {theme === "dark" ? (
-        <Moon className="size-6" />
-      ) : (
-        <Sun className="size-6" />
-      )}
-    </div>
+    <SignUp
+  forceRedirectUrl="/"
+  appearance={{
+    ...(theme === "dark" && { baseTheme: dark })
+  }}
+/>
   )
 }
 
+```
 
-File: /Users/dev/Desktop/project/qcare-mvp/components/utilities/providers.tsx
+File: /Users/dev/Desktop/project/qcare-mvp/next.config.mjs
+```mjs
 /*
-This client component provides the providers for the app.
+Configures Next.js for the app.
 */
 
-"use client"
+/** @type {import('next').NextConfig} */
+const nextConfig = { images: { remotePatterns: [{ hostname: "localhost" }] } }
 
-import { TooltipProvider } from "@/components/ui/tooltip"
-import {
-  ThemeProvider as NextThemesProvider,
-  ThemeProviderProps
-} from "next-themes"
+export default nextConfig
 
-export const Providers = ({ children, ...props }: ThemeProviderProps) => {
-  return (
-    <NextThemesProvider {...props}>
-      <TooltipProvider>{children}</TooltipProvider>
-    </NextThemesProvider>
-  )
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/prettier.config.cjs
+```cjs
+/*
+Configures Prettier for the app.
+*/
+
+/** @type {import('prettier').Config} */
+module.exports = {
+  endOfLine: "lf",
+  semi: false,
+  useTabs: false,
+  singleQuote: false,
+  arrowParens: "avoid",
+  tabWidth: 2,
+  trailingComma: "none",
+  importOrder: [
+    "^.+\\.scss$",
+    "^.+\\.css$",
+    "^(react/(.*)$)|^(react$)",
+    "^(next/(.*)$)|^(next$)",
+    "<THIRD_PARTY_MODULES>",
+    "",
+    "^types$",
+    "^@/types/(.*)$",
+    "^@/config/(.*)$",
+    "^@/lib/(.*)$",
+    "^@/hooks/(.*)$",
+    "^@/components/ui/(.*)$",
+    "^@/components/(.*)$",
+    "^@/registry/(.*)$",
+    "^@/styles/(.*)$",
+    "^@/app/(.*)$",
+    "",
+    "^[./]"
+  ],
+  importOrderSeparation: false,
+  importOrderSortSpecifiers: true,
+  importOrderBuiltinModulesToTop: true,
+  importOrderParserPlugins: ["typescript", "jsx", "decorators-legacy"],
+  importOrderMergeDuplicateImports: true,
+  importOrderCombineTypeAndValueImports: true
 }
 
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/queue-items-schema.ts
-/**
- * @file queue-items-schema.ts
- *
- * @description
- * Drizzle ORM table definition for **`queue_items`**. Each row represents
- * a patient currently (or previously) in an OPD queue for a specific branch.
- *
- * @columns
- * - id, branchId            : Identification & tenancy.
- * - patientName, phone      : Patient contact details.
- * - reason                  : Reason for visit / chief complaint.
- * - status (enum)           : WAITLIST | SERVING | COMPLETE | CANCELLED.
- * - position                : Integer ordering within WAITLIST.
- * - doctorId                : Optional textual identifier for doctor.
- * - createdAt / updatedAt   : Audit timestamps.
- *
- * @relations
- * - FK branchId ➔ branches.id (ON DELETE CASCADE)
- */
-// "use server"
-
-import {
-  integer,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uuid
-} from "drizzle-orm/pg-core"
-import { branchesTable } from "./branches-schema"
-
-/** Status enumeration as per functional spec */
-export const queueStatusEnum = pgEnum("queue_status", [
-  "WAITLIST",
-  "SERVING",
-  "COMPLETE",
-  "CANCELLED"
-])
-
-export const queueItemsTable = pgTable("queue_items", {
-  id: uuid("id").defaultRandom().primaryKey(),
-
-  /** Tenant reference — cascades on branch deletion */
-  branchId: uuid("branch_id")
-    .references(() => branchesTable.id, { onDelete: "cascade" })
-    .notNull(),
-
-  /** Patient-facing fields */
-  patientName: text("patient_name").notNull(),
-  phone: text("phone"), // Optional
-
-  /** Chief complaint / reason for visit */
-  reason: text("reason"),
-
-  /** Current queue status; default is WAITLIST */
-  status: queueStatusEnum("status").notNull().default("WAITLIST"),
-
-  /**
-   * Display ordering inside WAITLIST.
-   * IMPORTANT: Managed exclusively by server actions that enforce a dense
-   * ranking (0-n without gaps) to simplify “position” math.
-   */
-  position: integer("position").notNull().default(0),
-
-  /**
-   * The doctor the patient is eventually assigned to.
-   * We store the Clerk/Supabase userId or any identifier string.
-   */
-  doctorId: text("doctor_id"),
-
-  /** Audit fields */
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date())
-})
-
-/** Drizzle type for inserting a queue item */
-export type InsertQueueItem = typeof queueItemsTable.$inferInsert
-/** Drizzle type for selecting a queue item */
-export type SelectQueueItem = typeof queueItemsTable.$inferSelect
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/consult-history-schema.ts
-/**
- * @file consult-history-schema.ts
- *
- * @description
- * Drizzle ORM table definition for **`consult_history`**.
- * Each row captures timing metrics once a consultation finishes at a branch,
- * enabling analytics without scanning the volatile `queue_items`.
- *
- * @columns
- * - queueItemId           : FK to the source queue item.
- * - branchId              : Tenant, for faster analytics queries.
- * - waitDurationSeconds   : Time from registration to consult start.
- * - consultDurationSeconds: Time from consult start to completion.
- * - createdAt             : Audit timestamp.
- *
- * @notes
- * - We use `branchId` for composite indexing and because `queue_items`
- * may have a different retention policy.
- */
-// "use server"
-
-import { integer, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
-import { branchesTable } from "./branches-schema"
-import { queueItemsTable } from "./queue-items-schema"
-
-export const consultHistoryTable = pgTable("consult_history", {
-  id: uuid("id").defaultRandom().primaryKey(),
-
-  /** Original queue item for traceability */
-  queueItemId: uuid("queue_item_id")
-    .references(() => queueItemsTable.id, { onDelete: "cascade" })
-    .notNull(),
-
-  /** Tenant reference (for faster aggregation) */
-  branchId: uuid("branch_id")
-    .references(() => branchesTable.id, { onDelete: "cascade" })
-    .notNull(),
-
-  /** Time between registration and consult start, in seconds */
-  waitDurationSeconds: integer("wait_duration_seconds").notNull(),
-
-  /** Time between consult start and completion, in seconds */
-  consultDurationSeconds: integer("consult_duration_seconds").notNull(),
-
-  /** Audit timestamps */
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date())
-})
-
-/** Drizzle type for inserting consultation history */
-export type InsertConsultHistory = typeof consultHistoryTable.$inferInsert
-/** Drizzle type for selecting consultation history */
-export type SelectConsultHistory = typeof consultHistoryTable.$inferSelect
-
+```
 
 File: /Users/dev/Desktop/project/qcare-mvp/db/schema/profiles-schema.ts
+```ts
 /**
  * @file profiles-schema.ts
  *
@@ -4913,217 +5051,261 @@ export const profilesTable = pgTable("profiles", {
 export type InsertProfile = typeof profilesTable.$inferInsert
 /** Drizzle type for selecting a profile record */
 export type SelectProfile = typeof profilesTable.$inferSelect
+```
 
-File: /Users/dev/Desktop/project/qcare-mvp/db/schema/index.ts
+File: /Users/dev/Desktop/project/qcare-mvp/components/landing/hero.tsx
+```tsx
 /**
- * @file index.ts
- *
- * @description
- *  Barrel file that re‑exports every Drizzle schema in `db/schema`.
- *  The order of exports is not important but keeping them alphabetical
- *  improves merge resolution.
+ * @file hero.tsx
+ * @description This client component provides the hero section for the landing page.
+ * It has been updated to remove dependencies on the 'magicui' components.
  */
-
-/**
- * @file index.ts
- *
- * @description
- * Barrel file that re-exports every Drizzle schema in `db/schema`.
- * The order of exports is not important but keeping them alphabetical
- * improves merge resolution.
- */
-// "use server"
-
-export * from "./organization-schema"
-export * from "./branches-schema"
-export * from "./branches-settings-schema"
-export * from "./consult-history-schema"
-export * from "./profiles-schema"
-export * from "./queue-items-schema"
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/q/[queueId]/page.tsx
-/**
- * @file app/q/[queueId]/page.tsx
- *
- * @description
- * This file defines the server page for viewing a single patient's
- * queue status. It fetches data based on the `queueId` provided in the URL.
- */
-"use server"
-
-import { Suspense } from "react"
-import PatientQueueView from "./_components/patient-queue-view"
-import { getPublicQueueItemDetailsAction } from "@/actions/db/queue_items_actions"
-
-interface PatientQueuePageProps {
-  params: {
-    queueId: string
-  }
-}
-
-/**
- * The primary server component for the dynamic `/q/[queueId]` route. It awaits
- * the params and then uses a Suspense boundary to handle loading states.
- */
-export default async function PatientQueuePage({
-  params
-}: PatientQueuePageProps) {
-  // Await the params promise to get the resolved value
-  const { queueId } = await params
-
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          Loading your queue status...
-        </div>
-      }
-    >
-      <PatientQueueFetcher queueId={queueId} />
-    </Suspense>
-  )
-}
-
-/**
- * An asynchronous server component responsible for fetching the specific patient's
- * queue data and passing it to the display component.
- */
-async function PatientQueueFetcher({ queueId }: { queueId: string }) {
-  const result = await getPublicQueueItemDetailsAction(queueId)
-
-  if (!result.isSuccess) {
-    return (
-      <div className="flex min-h-screen items-center justify-center font-semibold text-red-500">
-        Error: {result.message}
-      </div>
-    )
-  }
-
-  return <PatientQueueView initialData={result.data} />
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/api/stripe/webhooks/route.ts
-/*
-This API route handles Stripe webhook events to manage subscription status changes and updates user profiles accordingly.
-*/
-
-import {
-  manageSubscriptionStatusChange,
-  updateStripeCustomer
-} from "@/actions/stripe-actions"
-import { stripe } from "@/lib/stripe"
-import { headers } from "next/headers"
-import Stripe from "stripe"
-
-const relevantEvents = new Set([
-  "checkout.session.completed",
-  "customer.subscription.updated",
-  "customer.subscription.deleted"
-])
-
-export async function POST(req: Request) {
-  const body = await req.text()
-  const sig = (await headers()).get("Stripe-Signature") as string
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-  let event: Stripe.Event
-
-  try {
-    if (!sig || !webhookSecret) {
-      throw new Error("Webhook secret or signature missing")
-    }
-
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
-  } catch (err: any) {
-    console.error(`Webhook Error: ${err.message}`)
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 })
-  }
-
-  if (relevantEvents.has(event.type)) {
-    try {
-      switch (event.type) {
-        case "customer.subscription.updated":
-        case "customer.subscription.deleted":
-          await handleSubscriptionChange(event)
-          break
-
-        case "checkout.session.completed":
-          await handleCheckoutSession(event)
-          break
-
-        default:
-          throw new Error("Unhandled relevant event!")
-      }
-    } catch (error) {
-      console.error("Webhook handler failed:", error)
-      return new Response(
-        "Webhook handler failed. View your nextjs function logs.",
-        { status: 400 }
-      )
-    }
-  }
-
-  return new Response(JSON.stringify({ received: true }))
-}
-
-async function handleSubscriptionChange(event: Stripe.Event) {
-  const subscription = event.data.object as Stripe.Subscription
-  const productId = subscription.items.data[0].price.product as string
-  await manageSubscriptionStatusChange(
-    subscription.id,
-    subscription.customer as string,
-    productId
-  )
-}
-
-async function handleCheckoutSession(event: Stripe.Event) {
-  const checkoutSession = event.data.object as Stripe.Checkout.Session
-  if (checkoutSession.mode === "subscription") {
-    const subscriptionId = checkoutSession.subscription as string
-    await updateStripeCustomer(
-      checkoutSession.client_reference_id as string,
-      subscriptionId,
-      checkoutSession.customer as string
-    )
-
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-      expand: ["default_payment_method"]
-    })
-
-    const productId = subscription.items.data[0].price.product as string
-    await manageSubscriptionStatusChange(
-      subscription.id,
-      subscription.customer as string,
-      productId
-    )
-  }
-}
-
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/signup/[[...signup]]/page.tsx
-/*
-This client page provides the signup form from Clerk.
-*/
-
 "use client"
 
-import { SignUp } from "@clerk/nextjs"
-import { dark } from "@clerk/themes"
-import { useTheme } from "next-themes"
+import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
+import { Rocket } from "lucide-react"
+import Link from "next/link"
 
-export default function SignUpPage() {
-  const { theme } = useTheme()
-
+export const HeroSection = () => {
   return (
-    <SignUp
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
+    <div className="flex flex-col items-center justify-center px-8 pt-32 text-center">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="flex items-center justify-center"
+      >
+        <Link
+          href="https://github.com/mckaywrigley/o1-pro-template-system"
+          className="bg-muted mb-4 inline-block rounded-full px-4 py-1.5 text-sm"
+        >
+          View the code on GitHub
+        </Link>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+        className="mt-8 flex max-w-2xl flex-col items-center justify-center gap-6"
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+          className="text-balance text-6xl font-bold"
+        >
+          QCare
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
+          className="max-w-xl text-balance text-xl"
+        >
+          A real-time, WhatsApp-driven queue-tracking system.
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8, ease: "easeOut" }}
+        >
+          <Link href="/signup">
+            <Button className="bg-blue-500 text-lg hover:bg-blue-600">
+              <Rocket className="mr-2 size-5" />
+              Get Started →
+            </Button>
+          </Link>
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, delay: 1, ease: "easeOut" }}
+        className="bg-muted mx-auto mt-20 w-full max-w-screen-lg items-center justify-center rounded-lg border shadow-lg"
+      >
+        <img
+          src="/hero.png"
+          alt="Hero"
+          className="w-full rounded-md border shadow-lg"
+        />
+      </motion.div>
+    </div>
   )
 }
 
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/.gitignore
+```
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env*.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+```
+
+File: /Users/dev/Desktop/project/qcare-mvp/components/landing/footer.tsx
+```tsx
+/*
+This server component provides the footer for the app.
+*/
+
+import { Github, Twitter } from "lucide-react"
+import Link from "next/link"
+
+export async function Footer() {
+  return (
+    <footer className="border-t">
+      <div className="container mx-auto max-w-7xl px-4 py-12 md:px-6">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Company</h3>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/about"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                About
+              </Link>
+              <Link
+                href="/blog"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Blog
+              </Link>
+              <Link
+                href="/careers"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Careers
+              </Link>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Product</h3>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/features"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Features
+              </Link>
+              <Link
+                href="/pricing"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Pricing
+              </Link>
+              <Link
+                href="/docs"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Documentation
+              </Link>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Resources</h3>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/support"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Support
+              </Link>
+              <Link
+                href="/terms"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Terms
+              </Link>
+              <Link
+                href="/privacy"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                Privacy
+              </Link>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold">Social</h3>
+            <div className="flex gap-4">
+              <Link
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Github className="text-muted-foreground hover:text-foreground size-6 transition" />
+              </Link>
+              <Link
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Twitter className="text-muted-foreground hover:text-foreground size-6 transition" />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-muted-foreground mt-12 pt-8 text-center">
+          <p>
+            &copy; {new Date().getFullYear()} Your Company. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+```
 
 File: /Users/dev/Desktop/project/qcare-mvp/app/(auth)/login/[[...login]]/page.tsx
+```tsx
 /*
 This client page provides the login form from Clerk.
 */
@@ -5139,106 +5321,15 @@ export default function LoginPage() {
 
   return (
     <SignIn
-      forceRedirectUrl="/"
-      appearance={{ baseTheme: theme === "dark" ? dark : undefined }}
-    />
+    forceRedirectUrl="/"
+    appearance={{
+      ...(theme === "dark" && { baseTheme: dark })
+    }}
+  />
   )
 }
 
-
-File: /Users/dev/Desktop/project/qcare-mvp/app/q/[queueId]/_components/patient-queue-view.tsx
-/**
- * @file patient-queue-view.tsx
- * @description This client component displays the patient's current position in the
- * queue and the estimated wait time. It now uses Supabase Realtime to listen
- * for changes and automatically refresh its data.
- *
- * @props
- * - `initialData`: The initial queue details, including the queue item ID.
- */
-"use client"
-
-import { PublicQueueDetails } from "@/actions/db/queue_items_actions"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import { supabase } from "@/lib/supabase-client"
-import { RealtimeChannel } from "@supabase/supabase-js"
-import { Clock, User } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-
-interface PatientQueueViewProps {
-  initialData: PublicQueueDetails
-}
-
-export default function PatientQueueView({
-  initialData
-}: PatientQueueViewProps) {
-  const { position, estimatedWaitTimeMinutes } = initialData
-  const queueId = initialData.queueItem.id
-  const router = useRouter()
-
-  useEffect(() => {
-    // This channel listens for ANY change on the `queue_items` table.
-    // When a change occurs, we refresh data to get the latest position and wait time.
-    const channel: RealtimeChannel = supabase
-      .channel(`patient-view-${queueId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "queue_items" },
-        payload => {
-          console.log("Change received!", payload)
-          // A simple and robust way to get the latest calculated data
-          // is to have the server re-render and re-fetch.
-          router.refresh()
-        }
-      )
-      .subscribe()
-
-    // Unsubscribe when the component is unmounted
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [queueId, router])
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">
-            Welcome, {initialData.queueItem.patientName}!
-          </CardTitle>
-          <CardDescription>
-            Here is your current status in the queue. This page will update
-            automatically.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-6 p-6 text-center">
-          <div className="flex flex-col items-center rounded-lg bg-blue-50 p-4">
-            <User className="mb-2 size-8 text-blue-500" />
-            <p className="text-muted-foreground text-sm">You are number</p>
-            <p className="text-4xl font-bold text-blue-600">{position}</p>
-            <p className="text-muted-foreground text-sm">in line</p>
-          </div>
-          <div className="flex flex-col items-center rounded-lg bg-green-50 p-4">
-            <Clock className="mb-2 size-8 text-green-500" />
-            <p className="text-muted-foreground text-sm">Estimated wait is</p>
-            <p className="text-4xl font-bold text-green-600">
-              {estimatedWaitTimeMinutes}
-            </p>
-            <p className="text-muted-foreground text-sm">minutes</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
+```
 </file_contents>
 
 
@@ -5307,3 +5398,101 @@ Above each file, include a "Here's what I did and why" explanation of what you d
 Then end with "STEP X COMPLETE. Here's what I did and why:" followed by an explanation of what you did and then a "USER INSTRUCTIONS: Please do the following:" followed by manual instructions for the user for things you can't do like installing libraries, updating configurations on services, etc.
 
 You also have permission to update the implementation plan if needed. If you update the implementation plan, include each modified step in full and return them as markdown code blocks at the end of the user instructions. No need to mark the current step as complete - that is implied.
+
+
+
+** DB Statements**
+
+-- STEP 1: COMPLETELY WIPE THE OLD DATABASE OBJECTS
+DROP TABLE IF EXISTS "consult_history" CASCADE;
+DROP TABLE IF EXISTS "queue_items" CASCADE;
+DROP TABLE IF EXISTS "profiles" CASCADE;
+DROP TABLE IF EXISTS "branch_settings" CASCADE;
+DROP TABLE IF EXISTS "branches" CASCADE;
+DROP TABLE IF EXISTS "organizations" CASCADE;
+DROP TYPE IF EXISTS "queue_status";
+DROP TYPE IF EXISTS "role";
+DROP TYPE IF EXISTS "membership";
+
+
+-- STEP 2: RECREATE THE TYPES (ENUMS)
+CREATE TYPE "queue_status" AS ENUM ('WAITLIST', 'SERVING', 'COMPLETE', 'CANCELLED');
+CREATE TYPE "role" AS ENUM ('super_admin', 'branch_admin', 'doctor', 'receptionist');
+CREATE TYPE "membership" AS ENUM ('free', 'pro');
+
+
+-- STEP 3: RECREATE ALL TABLES WITH THE CORRECT "snake_case" COLUMN NAMES
+
+CREATE TABLE "organizations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "branches" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" text NOT NULL,
+	"organization_id" uuid NOT NULL REFERENCES "organizations"("id") ON DELETE cascade,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "profiles" (
+	"user_id" text PRIMARY KEY NOT NULL,
+	"role" "role" NOT NULL,
+	"organization_id" uuid NOT NULL REFERENCES "organizations"("id") ON DELETE cascade,
+	"branch_id" uuid NOT NULL REFERENCES "branches"("id") ON DELETE cascade,
+	"membership" "membership" DEFAULT 'free' NOT NULL,
+	"stripe_customer_id" text,
+	"stripe_subscription_id" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "queue_items" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"branch_id" uuid NOT NULL REFERENCES "branches"("id") ON DELETE cascade,
+	"patient_name" text NOT NULL,
+	"phone" text,
+	"age" integer,
+	"height" integer,
+	"weight" integer,
+	"address" text,
+	"reason" text,
+	"status" "queue_status" DEFAULT 'WAITLIST' NOT NULL,
+	"position" integer DEFAULT 0 NOT NULL,
+	"doctor_id" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "consult_history" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"queue_item_id" uuid NOT NULL REFERENCES "queue_items"("id") ON DELETE cascade,
+	"branch_id" uuid NOT NULL REFERENCES "branches"("id") ON DELETE cascade,
+	"wait_duration_seconds" integer NOT NULL,
+	"consult_duration_seconds" integer NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+
+
+-- STEP 4: INSERT SAMPLE DATA SO YOU CAN TEST IMMEDIATELY
+
+WITH org AS (
+  INSERT INTO "organizations" (name) VALUES ('QCare Health Group') RETURNING id
+),
+branch AS (
+  INSERT INTO "branches" (name, organization_id) VALUES ('Creve Coeur Clinic', (SELECT id FROM org)) RETURNING id
+)
+INSERT INTO "profiles" ("user_id", role, "organization_id", "branch_id")
+VALUES
+  -- IMPORTANT: Replace this placeholder with YOUR Clerk User ID
+  ('user_2zXCe5xsMu0jwXVCJrrdIp8ynpH', 'receptionist', (SELECT id FROM org), (SELECT id FROM branch));
+
+-- Add a fake patient to the queue
+INSERT INTO "queue_items" ("branch_id", "patient_name", "reason", "position")
+VALUES
+  ((SELECT id FROM branches WHERE name = 'Creve Coeur Clinic'), 'John Doe', 'Annual Checkup', 0);
+
