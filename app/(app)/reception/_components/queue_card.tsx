@@ -1,10 +1,7 @@
 /**
  * @file queue-card.tsx
- * @description A client component that renders a card for a single patient in the queue.
- * It is a draggable component and now includes action buttons to modify patient status.
- *
- * @dependencies
- * - All previous dependencies plus `lucide-react` for new icons.
+ * @description Renders a patient card. It accepts handler functions for
+ * buttons and is draggable via the useSortable hook.
  */
 "use client"
 
@@ -30,22 +27,25 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+// This interface defines what props the QueueCard component accepts.
+// We are adding onPromptAdvance, onPromptCancel, and onNotify here.
 interface QueueCardProps {
   item: SelectQueueItem
   isOverlay?: boolean
-  onAdvance: (
+  onPromptAdvance?: (
     id: string,
+    name: string,
     currentStatus: SelectQueueItem["status"]
   ) => void
-  onCancel: (id: string) => void
-  onNotify: (phone: string, name: string) => void
+  onPromptCancel?: (id: string, name: string) => void
+  onNotify?: (phone: string, name: string) => void
 }
 
 export function QueueCard({
   item,
   isOverlay,
-  onAdvance,
-  onCancel,
+  onPromptAdvance,
+  onPromptCancel,
   onNotify
 }: QueueCardProps) {
   const {
@@ -110,13 +110,16 @@ export function QueueCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onNotify(item.phone!, item.patientName)}
+              onClick={() => onNotify?.(item.phone!, item.patientName)}
               disabled={!item.phone}
             >
               <Bell className="mr-2 size-4" />
               Notify
             </Button>
-            <Button size="sm" onClick={() => onAdvance(item.id, item.status)}>
+            <Button
+              size="sm"
+              onClick={() => onPromptAdvance?.(item.id, item.patientName, item.status)}
+            >
               <Check className="mr-2 size-4" />
               Advance
             </Button>
@@ -126,7 +129,7 @@ export function QueueCard({
           <Button
             size="sm"
             className="w-full"
-            onClick={() => onAdvance(item.id, item.status)}
+            onClick={() => onPromptAdvance?.(item.id, item.patientName, item.status)}
           >
             <Check className="mr-2 size-4" />
             Mark Complete
@@ -137,7 +140,7 @@ export function QueueCard({
             variant="ghost"
             size="icon"
             className="text-destructive"
-            onClick={() => onCancel(item.id)}
+            onClick={() => onPromptCancel?.(item.id, item.patientName)}
           >
             <X className="size-4" />
           </Button>

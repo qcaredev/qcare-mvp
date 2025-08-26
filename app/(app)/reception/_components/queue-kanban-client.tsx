@@ -1,13 +1,20 @@
 /**
  * @file queue-kanban-client.tsx
- * @description This client component renders the main Kanban board UI.
- * It now defines and passes down action handlers to each QueueCard.
- *
- * @dependencies
- * - All previous dependencies.
+ * @description The main client component for the reception dashboard, including
+ * the fix for the DragOverlay props.
  */
 "use client"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog"
 import { SelectQueueItem, queueStatusEnum } from "@/db/schema"
 import { useQueueMutations } from "@/lib/hooks/use-queue-mutations"
 import {
@@ -34,12 +41,20 @@ type GroupedQueueItems = {
   [key in (typeof queueStatusEnum.enumValues)[number]]: SelectQueueItem[]
 }
 
+type ConfirmationState = {
+  itemId: string
+  patientName: string
+  targetStatus: (typeof queueStatusEnum.enumValues)[number]
+} | null
+
 export function QueueKanbanClient({
   branchId,
   initialQueueItems
 }: QueueKanbanClientProps) {
   const [items, setItems] = useState(initialQueueItems)
   const [activeItem, setActiveItem] = useState<SelectQueueItem | null>(null)
+  const [confirmation, setConfirmation] = useState<ConfirmationState>(null)
+
   const { handleUpdateStatus, handleReorderItems, handleNotify } =
     useQueueMutations()
 
@@ -97,15 +112,12 @@ export function QueueKanbanClient({
       items.find(i => i.id === overId)?.status ??
       (over.data.current?.status as keyof GroupedQueueItems)
 
-    if (!activeContainer || !overContainer) return
-
-    if (activeContainer === overContainer) {
-      if (activeContainer === "WAITLIST") {
+    if (!activeContainer || !overContainer || activeContainer === overContainer) {
+      if (activeContainer === "WAITLIST" && overContainer === "WAITLIST") {
         const activeIndex = groupedItems.WAITLIST.findIndex(
           i => i.id === activeId
         )
         const overIndex = groupedItems.WAITLIST.findIndex(i => i.id === overId)
-
         if (activeIndex !== overIndex) {
           const newWaitlist = arrayMove(
             groupedItems.WAITLIST,
@@ -121,19 +133,19 @@ export function QueueKanbanClient({
           )
         }
       }
-    } else {
-      const newStatus = overContainer
-      setItems(prev =>
-        prev.map(item =>
-          item.id === activeId ? { ...item, status: newStatus } : item
-        )
-      )
-      handleUpdateStatus(activeId, newStatus)
+      return
     }
+
+    setConfirmation({
+      itemId: activeId,
+      patientName: activeItem.patientName,
+      targetStatus: overContainer
+    })
   }
 
-  const handleAdvance = (
+  const handlePromptAdvance = (
     id: string,
+    name: string,
     currentStatus: SelectQueueItem["status"]
   ) => {
     let nextStatus: SelectQueueItem["status"] | undefined
@@ -141,12 +153,19 @@ export function QueueKanbanClient({
     if (currentStatus === "SERVING") nextStatus = "COMPLETE"
 
     if (nextStatus) {
-      handleUpdateStatus(id, nextStatus)
+      setConfirmation({ itemId: id, patientName: name, targetStatus: nextStatus })
     }
   }
 
-  const handleCancel = (id: string) => {
-    handleUpdateStatus(id, "CANCELLED")
+  const handlePromptCancel = (id: string, name: string) => {
+    setConfirmation({ itemId: id, patientName: name, targetStatus: "CANCELLED" })
+  }
+
+  const executeStatusChange = () => {
+    if (confirmation) {
+      handleUpdateStatus(confirmation.itemId, confirmation.targetStatus)
+      setConfirmation(null)
+    }
   }
 
   return (
@@ -167,8 +186,8 @@ export function QueueKanbanClient({
               key={status}
               status={status as keyof GroupedQueueItems}
               items={itemsInColumn}
-              onAdvance={handleAdvance}
-              onCancel={handleCancel}
+              onPromptAdvance={handlePromptAdvance}
+              onPromptCancel={handlePromptCancel}
               onNotify={handleNotify}
             />
           ))}
@@ -182,14 +201,39 @@ export function QueueKanbanClient({
               <QueueCard
                 item={activeItem}
                 isOverlay
-                onAdvance={() => {}}
-                onCancel={() => {}}
-                onNotify={() => {}}
               />
             ) : null}
           </DragOverlay>,
           document.body
         )}
+      
+      <AlertDialog
+        open={!!confirmation}
+        onOpenChange={() => setConfirmation(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to move{" "}
+              <span className="font-semibold text-foreground">
+                {confirmation?.patientName}
+              </span>{" "}
+              to the{" "}
+              <span className="font-semibold text-foreground">
+                {confirmation?.targetStatus}
+              </span>{" "}
+              list?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeStatusChange}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DndContext>
   )
 }
@@ -197,14 +241,18 @@ export function QueueKanbanClient({
 function KanbanColumn({
   status,
   items,
-  onAdvance,
-  onCancel,
+  onPromptAdvance,
+  onPromptCancel,
   onNotify
 }: {
   status: keyof GroupedQueueItems
   items: SelectQueueItem[]
-  onAdvance: (id: string, currentStatus: SelectQueueItem["status"]) => void
-  onCancel: (id: string) => void
+  onPromptAdvance: (
+    id: string,
+    name: string,
+    currentStatus: SelectQueueItem["status"]
+  ) => void
+  onPromptCancel: (id: string, name: string) => void
   onNotify: (phone: string, name: string) => void
 }) {
   const itemIds = useMemo(() => items.map(i => i.id), [items])
@@ -221,8 +269,8 @@ function KanbanColumn({
               <QueueCard
                 key={item.id}
                 item={item}
-                onAdvance={onAdvance}
-                onCancel={onCancel}
+                onPromptAdvance={onPromptAdvance}
+                onPromptCancel={onPromptCancel}
                 onNotify={onNotify}
               />
             ))
